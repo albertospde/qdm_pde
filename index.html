@@ -276,20 +276,27 @@ dropArea.addEventListener('dragleave', ()=>dropArea.classList.remove('drag-over'
 dropArea.addEventListener('drop', e=>{e.preventDefault();dropArea.classList.remove('drag-over');handleFiles(e.dataTransfer.files);});
 
 async function handleFiles(fileList) {
-  for (const f of fileList) {
+  const files = Array.from(fileList);
+  console.log('[handleFiles] file ricevuti:', files.map(f => f.name));
+
+  await Promise.all(files.map(async f => {
     try {
       const buf = await f.arrayBuffer();
       const parsed = parseGFK(buf);
       const type = detectType(parsed);
+      console.log(`[handleFiles] ${f.name} → tipo: ${type}`);
       if (type) {
         recognized[type] = { file: f, ...parsed };
       } else {
         toast(`File non riconosciuto: ${f.name}`, 'err');
       }
     } catch(e) {
+      console.error(`[handleFiles] errore su ${f.name}:`, e);
       toast(`Errore lettura ${f.name}: ${e.message}`, 'err');
     }
-  }
+  }));
+
+  console.log('[handleFiles] recognized:', Object.keys(recognized));
   renderFilePills();
   checkReady();
 }
