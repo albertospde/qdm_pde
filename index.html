@@ -353,23 +353,34 @@ function detectType({ meta, headers, isGeneri }) {
   const hasCompare = !!meta['Compare period'];
   const hasTitle   = headers.includes('Title');
 
+  console.log('[detectType]', {
+    period, publisher, hasCompare, hasTitle, isGeneri,
+    headers: headers.slice(0,5)
+  });
+
   // 1. GENERI: header inizia con ID (colonna generi)
   if (isGeneri || hasCompare) {
-    return publisher === 'All' ? 'generiMercato' : 'generiPDE';
+    const t = publisher === 'All' ? 'generiMercato' : 'generiPDE';
+    console.log('  → ', t);
+    return t;
   }
 
   // 2. TOP 20: hanno colonna Title
   if (hasTitle) {
-    return period.includes(' - ') ? 'top20tot' : 'top20week';
+    const t = period.includes(' - ') ? 'top20tot' : 'top20week';
+    console.log('  → ', t);
+    return t;
   }
 
   // 3. GFK PUBLISHER: hanno Publisher, no Title
   if (headers.includes('Publisher')) {
     const years = [...new Set((period.match(/\d{4}/g) || []))];
-    if (years.every(y => y === '2025')) return 'gfk2025';
-    return 'gfk2026';
+    const t = years.every(y => y === '2025') ? 'gfk2025' : 'gfk2026';
+    console.log('  → ', t, 'years:', years);
+    return t;
   }
 
+  console.log('  → NULL (non riconosciuto)');
   return null;
 }
 
