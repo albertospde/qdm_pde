@@ -295,27 +295,35 @@ function parseGFK(buf) {
   const ws = wb.Sheets[wb.SheetNames[0]];
   const raw = XLSX.utils.sheet_to_json(ws, {header:1, defval:null});
 
-  // Metadati: righe 0-14 (R01-R15 nel file Excel)
+  // Metadati: scansiona le prime 16 righe raccogliendo coppie chiave/valore
   const meta = {};
-  for (let i = 0; i < 15; i++) {
+  for (let i = 0; i < 16; i++) {
     const r = raw[i];
     if (!r) continue;
     const k = r[0] != null ? String(r[0]).trim() : null;
     const v = r[1] != null ? String(r[1]).trim() : null;
-    if (k && v) meta[k] = v;
+    if (k && v && k !== 'Criteria:') meta[k] = v;
   }
 
-  // Rileva struttura:
-  // File GFK/TOP20: R15 (idx 15) contiene il period ("CW..."), R16 = header, R17+ = dati
-  // File GENERI:    R15 vuota, R16 = periodi ("CW... CW... Difference"), R17 = header, R18+ = dati
-  const r15 = raw[15] || [];
-  const r16 = raw[16] || [];
-  const r15Empty = r15.every(v => v == null);
-  const r16HasCW = r16.some(v => v != null && String(v).includes('CW'));
-  const isGeneri = r15Empty && r16HasCW;
+  // Trova la riga header dinamicamente:
+  // È la prima riga con almeno 3 celle non-null che inizia con 'Rank' o 'ID'
+  let headerRowIdx = -1;
+  for (let i = 10; i < 20; i++) {
+    const r = raw[i] || [];
+    const nonNull = r.filter(v => v != null);
+    const first = nonNull[0] != null ? String(nonNull[0]).trim() : '';
+    if (nonNull.length >= 3 && (first === 'Rank' || first === 'ID')) {
+      headerRowIdx = i;
+      break;
+    }
+  }
+  if (headerRowIdx === -1) headerRowIdx = 16; // fallback
 
-  const headerRowIdx = isGeneri ? 17 : 16;
-  const dataStartIdx = isGeneri ? 18 : 17;
+  const dataStartIdx = headerRowIdx + 1;
+
+  // isGeneri: header inizia con 'ID' (non 'Rank')
+  const firstHeader = (raw[headerRowIdx] || [])[0];
+  const isGeneri = firstHeader != null && String(firstHeader).trim() === 'ID';
 
   const headers = (raw[headerRowIdx] || []).map((h,i) =>
     h != null ? String(h).trim() : `_c${i}`
@@ -335,12 +343,12 @@ function parseGFK(buf) {
 
 // ── DETECT TYPE ──────────────────────────────────────────────
 function detectType({ meta, headers, isGeneri }) {
-  const period    = meta['Period'] || '';
-  const publisher = meta['Publisher'] || '';
+  const period     = meta['Period'] || '';
+  const publisher  = meta['Publisher'] || '';
   const hasCompare = !!meta['Compare period'];
-  const hasTitle  = headers.includes('Title');
+  const hasTitle   = headers.includes('Title');
 
-  // 1. GENERI: struttura sfalsata o hanno Compare period
+  // 1. GENERI: header inizia con ID (colonna generi)
   if (isGeneri || hasCompare) {
     return publisher === 'All' ? 'generiMercato' : 'generiPDE';
   }
@@ -350,11 +358,10 @@ function detectType({ meta, headers, isGeneri }) {
     return period.includes(' - ') ? 'top20tot' : 'top20week';
   }
 
-  // 3. GFK PUBLISHER: no Title, no Compare period
+  // 3. GFK PUBLISHER: hanno Publisher, no Title
   if (headers.includes('Publisher')) {
-    // Estrai tutti gli anni dal period — se sono tutti 2025 è il file 2025
-    const years = [...new Set(period.match(/\d{4}/g) || [])];
-    if (years.length === 1 && years[0] === '2025') return 'gfk2025';
+    const years = [...new Set((period.match(/\d{4}/g) || []))];
+    if (years.every(y => y === '2025')) return 'gfk2025';
     return 'gfk2026';
   }
 
