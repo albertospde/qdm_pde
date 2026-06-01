@@ -253,12 +253,11 @@ async function handleFiles(fileList) {
 function parseGFK(buf) {
   const wb = XLSX.read(buf, {type:'array'});
   const ws = wb.Sheets[wb.SheetNames[0]];
-  // sheet_to_json con header:1 → array di array, indice 0-based
   const raw = XLSX.utils.sheet_to_json(ws, {header:1, defval:null});
 
-  // Metadati: righe 0-15 (file Excel righe 1-16)
+  // Metadati: righe 0-14 (R01-R15 nel file Excel)
   const meta = {};
-  for (let i = 0; i < 16; i++) {
+  for (let i = 0; i < 15; i++) {
     const r = raw[i];
     if (!r) continue;
     const k = r[0] != null ? String(r[0]).trim() : null;
@@ -266,38 +265,32 @@ function parseGFK(buf) {
     if (k && v) meta[k] = v;
   }
 
-  // Determina se file generi (headers sfalsati di una riga)
-  // I file generi hanno riga 16 (idx 16) con le date come header di gruppo
-  // e riga 17 (idx 17) con gli header reali: ID, Genre, Value, Value%, Units...
-  const row16 = raw[16] || [];
-  const row17 = raw[17] || [];
-  
-  // Se riga 16 col 0 è null e col 2 contiene "CW" → file generi
-  const isGeneri = (row16[0] == null && row16[2] != null && String(row16[2]).includes('CW'));
-  
-  let headerRowIdx, dataStartIdx;
-  if (isGeneri) {
-    headerRowIdx = 17; // riga 17 (idx 17) contiene ID, Genre, Value...
-    dataStartIdx = 18;
-  } else {
-    headerRowIdx = 16; // riga 16 (idx 16) contiene Rank, Publisher/Title...
-    dataStartIdx = 17;
-  }
+  // Rileva struttura:
+  // File GFK/TOP20: R15 (idx 15) contiene il period ("CW..."), R16 = header, R17+ = dati
+  // File GENERI:    R15 vuota, R16 = periodi ("CW... CW... Difference"), R17 = header, R18+ = dati
+  const r15 = raw[15] || [];
+  const r16 = raw[16] || [];
+  const r15Empty = r15.every(v => v == null);
+  const r16HasCW = r16.some(v => v != null && String(v).includes('CW'));
+  const isGeneri = r15Empty && r16HasCW;
 
-  const headers = (raw[headerRowIdx] || []).map((h,i) => h != null ? String(h).trim() : `_c${i}`);
-  // Per i generi salva anche la riga dei periodi (raw[16])
-  const periodRow = isGeneri ? (raw[16] || []) : null;
+  const headerRowIdx = isGeneri ? 17 : 16;
+  const dataStartIdx = isGeneri ? 18 : 17;
+
+  const headers = (raw[headerRowIdx] || []).map((h,i) =>
+    h != null ? String(h).trim() : `_c${i}`
+  );
 
   const rows = [];
   for (let i = dataStartIdx; i < raw.length; i++) {
     const r = raw[i];
-    if (!r || r.every(v=>v==null)) continue;
+    if (!r || r.every(v => v == null)) continue;
     const obj = {};
     headers.forEach((h,j) => { obj[h] = r[j] ?? null; });
     rows.push(obj);
   }
 
-  return { meta, headers, rows, isGeneri, periodRow };
+  return { meta, headers, rows, isGeneri };
 }
 
 // ── DETECT TYPE ──────────────────────────────────────────────
@@ -307,23 +300,22 @@ function detectType({ meta, headers, isGeneri }) {
   const hasCompare = !!meta['Compare period'];
   const hasTitle  = headers.includes('Title');
 
-  // Generi: hanno Compare period (e isGeneri = true dalla struttura)
-  if (hasCompare || isGeneri) {
-    // PDE = publisher non è "All"
+  // 1. GENERI: struttura sfalsata o hanno Compare period
+  if (isGeneri || hasCompare) {
     return publisher === 'All' ? 'generiMercato' : 'generiPDE';
   }
 
-  // Top 20: hanno colonna Title
+  // 2. TOP 20: hanno colonna Title
   if (hasTitle) {
-    // WEEK = period senza trattino (es "CW 20 2026")
-    // TOTALE = period con trattino (es "CW 01 2026 - CW 20 2026")
     return period.includes(' - ') ? 'top20tot' : 'top20week';
   }
 
-  // GFK publisher: no Title, no Compare period
+  // 3. GFK PUBLISHER: no Title, no Compare period
   if (headers.includes('Publisher')) {
-    const year = (period.match(/(\d{4})/) || [])[1];
-    return year === '2025' ? 'gfk2025' : 'gfk2026';
+    // Estrai tutti gli anni dal period — se sono tutti 2025 è il file 2025
+    const years = [...new Set(period.match(/\d{4}/g) || [])];
+    if (years.length === 1 && years[0] === '2025') return 'gfk2025';
+    return 'gfk2026';
   }
 
   return null;
