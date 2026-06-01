@@ -7,644 +7,208 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
+:root {
+  --bg:#0f1117; --surface:#181c25; --surface2:#1e2330; --border:#2a3045;
+  --accent:#00b4e8; --accent2:#1a2d6b;
+  --green:#22c55e; --red:#ef4444; --yellow:#f59e0b;
+  --text:#e2e8f0; --text2:#94a3b8; --text3:#64748b;
+  --mono:'IBM Plex Mono',monospace; --sans:'IBM Plex Sans',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14px;min-height:100vh;}
 
-  :root {
-    --bg: #0f1117;
-    --surface: #181c25;
-    --surface2: #1e2330;
-    --border: #2a3045;
-    --accent: #00b4e8;
-    --accent2: #1a2d6b;
-    --green: #22c55e;
-    --red: #ef4444;
-    --yellow: #f59e0b;
-    --text: #e2e8f0;
-    --text2: #94a3b8;
-    --text3: #64748b;
-    --mono: 'IBM Plex Mono', monospace;
-    --sans: 'IBM Plex Sans', sans-serif;
-  }
+/* HEADER */
+.hdr{background:var(--surface);border-bottom:1px solid var(--border);padding:0 24px;display:flex;align-items:center;gap:16px;height:54px;position:sticky;top:0;z-index:100;}
+.hdr-logo{background:#fff;border-radius:6px;padding:3px 8px;font-family:var(--mono);font-weight:600;font-size:12px;color:var(--accent2);letter-spacing:1px;}
+.hdr-title{font-size:13px;font-weight:500;color:var(--text2);}
+.hdr-right{margin-left:auto;display:flex;align-items:center;gap:10px;}
+.week-select{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:5px 10px;border-radius:6px;font-size:12px;font-family:var(--sans);cursor:pointer;min-width:180px;}
+.week-select:focus{outline:none;border-color:var(--accent);}
+.badge{font-family:var(--mono);font-size:11px;padding:3px 8px;border-radius:4px;background:rgba(0,180,232,.1);border:1px solid rgba(0,180,232,.2);color:var(--accent);}
 
-  * { box-sizing: border-box; margin: 0; padding: 0; }
+/* UPLOAD ZONE */
+.upload-zone{padding:20px 24px;border-bottom:1px solid var(--border);background:var(--surface);}
+.drop-area{border:2px dashed var(--border);border-radius:10px;padding:28px;text-align:center;transition:.15s;cursor:pointer;position:relative;}
+.drop-area:hover,.drop-area.drag-over{border-color:var(--accent);background:rgba(0,180,232,.04);}
+.drop-area input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;}
+.drop-icon{font-size:32px;margin-bottom:8px;}
+.drop-title{font-size:14px;font-weight:600;color:var(--text);margin-bottom:4px;}
+.drop-sub{font-size:12px;color:var(--text3);}
+.files-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-top:14px;}
+.file-pill{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:8px 10px;font-size:11px;display:flex;align-items:center;gap:6px;}
+.file-pill.ok{border-color:var(--green);background:rgba(34,197,94,.06);}
+.file-pill.err{border-color:var(--red);}
+.file-pill-icon{font-size:14px;}
+.file-pill-info{flex:1;min-width:0;}
+.file-pill-type{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:var(--text3);}
+.file-pill-name{font-size:10px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.upload-actions{display:flex;align-items:center;gap:10px;margin-top:14px;}
 
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: var(--sans);
-    font-size: 14px;
-    min-height: 100vh;
-  }
+/* BTN */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 16px;border-radius:6px;border:none;cursor:pointer;font-family:var(--sans);font-size:13px;font-weight:500;transition:.15s;}
+.btn-primary{background:var(--accent);color:#000;}
+.btn-primary:hover{background:#00c8ff;}
+.btn-primary:disabled{opacity:.4;cursor:not-allowed;}
+.btn-ghost{background:var(--surface2);color:var(--text);border:1px solid var(--border);}
+.btn-ghost:hover{border-color:var(--accent);color:var(--accent);}
+.status-txt{font-size:12px;color:var(--text3);}
 
-  /* HEADER */
-  .header {
-    background: var(--surface);
-    border-bottom: 1px solid var(--border);
-    padding: 0 24px;
-    display: flex;
-    align-items: center;
-    gap: 20px;
-    height: 56px;
-    position: sticky;
-    top: 0;
-    z-index: 100;
-  }
-  .header-logo {
-    background: #fff;
-    border-radius: 6px;
-    padding: 4px 8px;
-    font-family: var(--mono);
-    font-weight: 600;
-    font-size: 12px;
-    color: var(--accent2);
-    letter-spacing: 1px;
-  }
-  .header-title {
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--text2);
-    letter-spacing: 0.5px;
-  }
-  .header-week {
-    margin-left: auto;
-    font-family: var(--mono);
-    font-size: 11px;
-    color: var(--accent);
-    background: rgba(0,180,232,0.1);
-    border: 1px solid rgba(0,180,232,0.2);
-    border-radius: 4px;
-    padding: 3px 8px;
-  }
+/* PROGRESS BAR */
+.progress-wrap{margin-top:10px;display:none;}
+.progress-bar{height:3px;background:var(--border);border-radius:2px;overflow:hidden;}
+.progress-fill{height:100%;background:var(--accent);width:0;transition:width .3s;}
+.progress-label{font-size:11px;color:var(--text3);margin-top:4px;}
 
-  /* UPLOAD ZONE */
-  .upload-section {
-    padding: 24px;
-    border-bottom: 1px solid var(--border);
-    background: var(--surface);
-  }
-  .upload-grid {
-    display: grid;
-    grid-template-columns: repeat(6, 1fr);
-    gap: 10px;
-    margin-top: 12px;
-  }
-  .upload-card {
-    background: var(--surface2);
-    border: 1px dashed var(--border);
-    border-radius: 8px;
-    padding: 12px 10px;
-    text-align: center;
-    cursor: pointer;
-    transition: all 0.15s;
-    position: relative;
-  }
-  .upload-card:hover { border-color: var(--accent); background: rgba(0,180,232,0.04); }
-  .upload-card.loaded { border-style: solid; border-color: var(--green); background: rgba(34,197,94,0.05); }
-  .upload-card input[type=file] {
-    position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%;
-  }
-  .upload-card-label {
-    font-size: 10px;
-    font-weight: 600;
-    color: var(--text3);
-    text-transform: uppercase;
-    letter-spacing: 0.8px;
-    margin-bottom: 4px;
-  }
-  .upload-card-name {
-    font-size: 11px;
-    color: var(--text2);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .upload-card-icon { font-size: 20px; margin-bottom: 4px; }
-  .upload-card.loaded .upload-card-icon::after { content: ' ✓'; color: var(--green); font-size: 14px; }
+/* TABS */
+.tabs{display:flex;padding:0 24px;border-bottom:1px solid var(--border);background:var(--surface);}
+.tab{padding:13px 18px;font-size:12px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;color:var(--text3);cursor:pointer;border-bottom:2px solid transparent;transition:.15s;}
+.tab:hover{color:var(--text);}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent);}
 
-  .btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 8px 18px;
-    border-radius: 6px;
-    border: none;
-    cursor: pointer;
-    font-family: var(--sans);
-    font-size: 13px;
-    font-weight: 500;
-    transition: all 0.15s;
-  }
-  .btn-primary {
-    background: var(--accent);
-    color: #000;
-  }
-  .btn-primary:hover { background: #00c8ff; }
-  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
-  .btn-ghost {
-    background: var(--surface2);
-    color: var(--text);
-    border: 1px solid var(--border);
-  }
-  .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+/* MAIN */
+.main{padding:24px;}
+.empty-state{text-align:center;padding:80px 20px;color:var(--text3);}
+.empty-state h2{font-size:18px;color:var(--text2);margin-bottom:8px;}
 
-  .upload-actions {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-top: 14px;
-  }
-  .upload-status {
-    font-size: 12px;
-    color: var(--text3);
-  }
+/* CARDS METRICHE */
+.metrics-row{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:20px;}
+.metric-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;}
+.mc-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--text3);margin-bottom:8px;}
+.mc-val{font-family:var(--mono);font-size:22px;font-weight:600;color:var(--text);}
+.mc-delta{font-family:var(--mono);font-size:12px;margin-top:4px;}
+.mc-sub{font-size:11px;color:var(--text3);margin-top:2px;}
+.pos{color:var(--green)!important;} .neg{color:var(--red)!important;}
 
-  /* TABS */
-  .tabs {
-    display: flex;
-    gap: 0;
-    padding: 0 24px;
-    border-bottom: 1px solid var(--border);
-    background: var(--surface);
-  }
-  .tab {
-    padding: 14px 20px;
-    font-size: 12px;
-    font-weight: 600;
-    letter-spacing: 0.6px;
-    text-transform: uppercase;
-    color: var(--text3);
-    cursor: pointer;
-    border-bottom: 2px solid transparent;
-    transition: all 0.15s;
-  }
-  .tab:hover { color: var(--text); }
-  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+/* BLOCCO */
+.blk{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:20px;}
+.blk-hdr{padding:12px 16px;background:var(--surface2);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.blk-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--text2);}
 
-  /* MAIN CONTENT */
-  .main { padding: 24px; }
+/* TABELLE */
+.tbl-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;font-size:12px;}
+table th{padding:7px 12px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:var(--text3);border-bottom:1px solid var(--border);background:var(--surface2);white-space:nowrap;}
+table th.r{text-align:right;}
+table th.l{text-align:left;}
+table td{padding:8px 12px;border-bottom:1px solid rgba(42,48,69,.4);font-family:var(--mono);font-size:11px;color:var(--text2);text-align:right;white-space:nowrap;}
+table td.l{text-align:left;font-family:var(--sans);font-size:12px;font-weight:500;color:var(--text);}
+table td.dim{font-size:10px;color:var(--text3);font-family:var(--sans);}
+table tr:hover td{background:rgba(255,255,255,.02);}
+table tr.tot td{background:rgba(0,180,232,.07);font-weight:600;color:var(--text);border-top:1px solid var(--border);}
+table tr:last-child td{border-bottom:none;}
+.thead-group th{background:rgba(0,180,232,.08);color:var(--accent);text-align:center!important;font-size:10px;}
+.thead-group th.l{text-align:left!important;color:var(--text3);}
 
-  /* EMPTY STATE */
-  .empty-state {
-    text-align: center;
-    padding: 80px 20px;
-    color: var(--text3);
-  }
-  .empty-state h2 { font-size: 20px; color: var(--text2); margin-bottom: 8px; }
-  .empty-state p { font-size: 13px; }
+/* GENERI GRID */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
 
-  /* RECAP TAB */
-  .recap-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 20px;
-    margin-bottom: 24px;
-  }
-  .recap-block {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    overflow: hidden;
-  }
-  .recap-block-header {
-    padding: 12px 16px;
-    background: var(--surface2);
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  .recap-block-title {
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    color: var(--text2);
-  }
-  .recap-block-badge {
-    font-family: var(--mono);
-    font-size: 10px;
-    padding: 2px 6px;
-    border-radius: 3px;
-    background: rgba(0,180,232,0.1);
-    color: var(--accent);
-  }
-  .recap-metrics {
-    padding: 16px;
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 12px;
-  }
-  .metric {
-    background: var(--surface2);
-    border-radius: 8px;
-    padding: 12px;
-    border: 1px solid var(--border);
-  }
-  .metric-label {
-    font-size: 10px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.8px;
-    color: var(--text3);
-    margin-bottom: 6px;
-  }
-  .metric-value {
-    font-family: var(--mono);
-    font-size: 16px;
-    font-weight: 600;
-    color: var(--text);
-  }
-  .metric-delta {
-    font-family: var(--mono);
-    font-size: 11px;
-    margin-top: 3px;
-  }
-  .metric-delta.pos { color: var(--green); }
-  .metric-delta.neg { color: var(--red); }
-  .metric-sub {
-    font-family: var(--mono);
-    font-size: 11px;
-    color: var(--text3);
-    margin-top: 2px;
-  }
+/* MODAL */
+.modal-ov{position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:1000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:12px;width:700px;max-width:96vw;max-height:88vh;display:flex;flex-direction:column;overflow:hidden;}
+.modal-hdr{padding:16px 20px;border-bottom:1px solid var(--border);background:var(--surface2);}
+.modal-hdr h3{font-size:15px;font-weight:600;margin-bottom:3px;}
+.modal-hdr p{font-size:12px;color:var(--text3);}
+.modal-body{padding:14px 20px;overflow-y:auto;flex:1;}
+.mrow{display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid rgba(42,48,69,.5);}
+.mrow:last-child{border-bottom:none;}
+.mrow-name{flex:1;font-size:12px;font-weight:500;}
+.mrow-name small{display:block;font-size:10px;color:var(--text3);font-family:var(--mono);}
+.msel{width:240px;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:6px 10px;border-radius:6px;font-size:12px;font-family:var(--sans);cursor:pointer;outline:none;}
+.msel:focus{border-color:var(--accent);}
+.modal-ftr{padding:13px 20px;border-top:1px solid var(--border);background:var(--surface2);display:flex;justify-content:flex-end;gap:10px;}
 
-  /* PREZZI MEDI TABLE */
-  .promo-table-wrap {
-    padding: 0 16px 16px;
-    overflow-x: auto;
-  }
-  .promo-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 12px;
-  }
-  .promo-table th {
-    text-align: right;
-    padding: 6px 10px;
-    font-size: 10px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.7px;
-    color: var(--text3);
-    border-bottom: 1px solid var(--border);
-    white-space: nowrap;
-  }
-  .promo-table th:first-child { text-align: left; }
-  .promo-table td {
-    padding: 7px 10px;
-    border-bottom: 1px solid rgba(42,48,69,0.5);
-    text-align: right;
-    font-family: var(--mono);
-    font-size: 11px;
-    color: var(--text2);
-  }
-  .promo-table td:first-child {
-    text-align: left;
-    font-family: var(--sans);
-    font-weight: 500;
-    color: var(--text);
-    font-size: 12px;
-  }
-  .promo-table tr:last-child td { border-bottom: none; }
-  .promo-table tr:hover td { background: rgba(255,255,255,0.02); }
+/* TOP20 TABLE */
+.rank-badge{display:inline-block;min-width:24px;text-align:center;font-family:var(--mono);font-size:11px;padding:2px 5px;border-radius:4px;background:var(--surface2);color:var(--text3);}
+.rank-badge.gold{background:rgba(245,158,11,.15);color:var(--yellow);}
+.rank-badge.silver{background:rgba(148,163,184,.1);color:var(--text2);}
+.rank-badge.bronze{background:rgba(180,120,60,.1);color:#cd7f32;}
 
-  /* PARI PERIMETRO / QUADRATURA TABLE */
-  .big-table-wrap {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    overflow: hidden;
-  }
-  .big-table-header {
-    padding: 14px 20px;
-    background: var(--surface2);
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-  .big-table-title {
-    font-size: 12px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.8px;
-    color: var(--text2);
-  }
-  .big-table-scroll { overflow-x: auto; }
-  .big-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 12px;
-    min-width: 900px;
-  }
-  .big-table thead tr:first-child th {
-    background: rgba(0,180,232,0.07);
-    font-size: 10px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.7px;
-    color: var(--accent);
-    padding: 8px 12px;
-    text-align: center;
-    border-bottom: 1px solid var(--border);
-  }
-  .big-table thead tr:first-child th:first-child { text-align: left; color: var(--text3); }
-  .big-table thead tr:nth-child(2) th {
-    font-size: 10px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.6px;
-    color: var(--text3);
-    padding: 6px 12px;
-    text-align: right;
-    border-bottom: 1px solid var(--border);
-    background: var(--surface2);
-  }
-  .big-table thead tr:nth-child(2) th:first-child { text-align: left; }
-  .big-table tbody td {
-    padding: 8px 12px;
-    border-bottom: 1px solid rgba(42,48,69,0.4);
-    text-align: right;
-    font-family: var(--mono);
-    font-size: 11px;
-    color: var(--text2);
-    white-space: nowrap;
-  }
-  .big-table tbody td:first-child {
-    text-align: left;
-    font-family: var(--sans);
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--text);
-    min-width: 220px;
-  }
-  .big-table tbody tr:hover td { background: rgba(255,255,255,0.02); }
-  .big-table tbody tr.total-row td {
-    background: rgba(0,180,232,0.06);
-    font-weight: 600;
-    color: var(--text);
-    border-top: 1px solid var(--border);
-  }
-  .big-table tbody tr.group-row td {
-    background: rgba(255,255,255,0.02);
-    color: var(--text3);
-    font-size: 10px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.6px;
-    padding: 5px 12px;
-  }
-  .big-table tbody tr.group-row td:first-child { color: var(--accent); }
-
-  .pos { color: var(--green) !important; }
-  .neg { color: var(--red) !important; }
-  .neu { color: var(--text3) !important; }
-
-  /* GENERI */
-  .generi-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 20px;
-  }
-
-  /* MODAL MAPPATURA */
-  .modal-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.75);
-    z-index: 1000;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    backdrop-filter: blur(4px);
-  }
-  .modal {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    width: 680px;
-    max-width: 95vw;
-    max-height: 85vh;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-  }
-  .modal-header {
-    padding: 18px 20px;
-    border-bottom: 1px solid var(--border);
-    background: var(--surface2);
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-  }
-  .modal-header-icon { font-size: 20px; }
-  .modal-header-text h3 { font-size: 15px; font-weight: 600; }
-  .modal-header-text p { font-size: 12px; color: var(--text3); margin-top: 3px; }
-  .modal-body { padding: 16px 20px; overflow-y: auto; flex: 1; }
-  .modal-row {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 10px 0;
-    border-bottom: 1px solid rgba(42,48,69,0.5);
-  }
-  .modal-row:last-child { border-bottom: none; }
-  .modal-row-name {
-    flex: 1;
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--text);
-  }
-  .modal-row-name span {
-    display: block;
-    font-size: 10px;
-    color: var(--text3);
-    margin-top: 2px;
-    font-family: var(--mono);
-  }
-  .modal-select {
-    width: 240px;
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    color: var(--text);
-    padding: 7px 10px;
-    border-radius: 6px;
-    font-size: 12px;
-    font-family: var(--sans);
-    cursor: pointer;
-    outline: none;
-  }
-  .modal-select:focus { border-color: var(--accent); }
-  .modal-footer {
-    padding: 14px 20px;
-    border-top: 1px solid var(--border);
-    background: var(--surface2);
-    display: flex;
-    justify-content: flex-end;
-    gap: 10px;
-  }
-
-  /* TOAST */
-  .toast {
-    position: fixed;
-    bottom: 24px;
-    right: 24px;
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 12px 16px;
-    font-size: 13px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    z-index: 2000;
-    animation: slideIn 0.2s ease;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
-  }
-  .toast.success { border-color: var(--green); }
-  .toast.error { border-color: var(--red); }
-  @keyframes slideIn { from { opacity:0; transform: translateY(8px); } to { opacity:1; transform: translateY(0); } }
-
-  .spinner {
-    display: inline-block;
-    width: 14px; height: 14px;
-    border: 2px solid rgba(0,180,232,0.3);
-    border-top-color: var(--accent);
-    border-radius: 50%;
-    animation: spin 0.7s linear infinite;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
-
-  .section-label {
-    font-size: 10px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    color: var(--text3);
-    margin-bottom: 10px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  .section-label::after {
-    content: '';
-    flex: 1;
-    height: 1px;
-    background: var(--border);
-  }
+/* TOAST */
+.toast{position:fixed;bottom:22px;right:22px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:11px 15px;font-size:13px;display:flex;align-items:center;gap:8px;z-index:2000;box-shadow:0 8px 24px rgba(0,0,0,.5);animation:tin .2s ease;}
+.toast.ok{border-color:var(--green);}
+.toast.err{border-color:var(--red);}
+@keyframes tin{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.spin{display:inline-block;width:13px;height:13px;border:2px solid rgba(0,180,232,.3);border-top-color:var(--accent);border-radius:50%;animation:sp .7s linear infinite;}
+@keyframes sp{to{transform:rotate(360deg)}}
 </style>
 </head>
 <body>
 
-<div class="header">
-  <div class="header-logo">PDE</div>
-  <div class="header-title">QDM — Quote di Mercato GFK</div>
-  <div class="header-week" id="headerWeek">Nessun dato caricato</div>
+<div class="hdr">
+  <div class="hdr-logo">PDE</div>
+  <div class="hdr-title">QDM — Quote di Mercato GFK</div>
+  <div class="hdr-right">
+    <select class="week-select" id="weekSelect" onchange="loadWeek(this.value)" style="display:none">
+      <option value="">— Seleziona settimana —</option>
+    </select>
+    <span class="badge" id="weekBadge" style="display:none"></span>
+  </div>
 </div>
 
-<!-- UPLOAD SECTION -->
-<div class="upload-section">
-  <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
-    <div class="section-label" style="margin-bottom:0; flex:1;">Carica i 6 file GFK</div>
+<!-- UPLOAD -->
+<div class="upload-zone" id="uploadZone">
+  <div class="drop-area" id="dropArea">
+    <input type="file" multiple accept=".xlsx,.xls" id="fileInput" onchange="handleFiles(this.files)">
+    <div class="drop-icon">📂</div>
+    <div class="drop-title">Trascina qui i 6 file GFK oppure clicca per selezionarli</div>
+    <div class="drop-sub">Vengono riconosciuti automaticamente — puoi caricarli tutti insieme</div>
   </div>
-  <div class="upload-grid">
-    <div class="upload-card" id="card-gfk26">
-      <input type="file" accept=".xlsx,.xls" onchange="handleFile(event,'gfk2026')">
-      <div class="upload-card-icon">📊</div>
-      <div class="upload-card-label">DATI GFK 2026</div>
-      <div class="upload-card-name" id="name-gfk2026">Clicca per caricare</div>
-    </div>
-    <div class="upload-card" id="card-gfk25">
-      <input type="file" accept=".xlsx,.xls" onchange="handleFile(event,'gfk2025')">
-      <div class="upload-card-icon">📊</div>
-      <div class="upload-card-label">DATI GFK 2025</div>
-      <div class="upload-card-name" id="name-gfk2025">Clicca per caricare</div>
-    </div>
-    <div class="upload-card" id="card-top20w">
-      <input type="file" accept=".xlsx,.xls" onchange="handleFile(event,'top20week')">
-      <div class="upload-card-icon">📋</div>
-      <div class="upload-card-label">TOP 20 WEEK</div>
-      <div class="upload-card-name" id="name-top20week">Clicca per caricare</div>
-    </div>
-    <div class="upload-card" id="card-top20t">
-      <input type="file" accept=".xlsx,.xls" onchange="handleFile(event,'top20tot')">
-      <div class="upload-card-icon">📋</div>
-      <div class="upload-card-label">TOP 20 TOTALE</div>
-      <div class="upload-card-name" id="name-top20tot">Clicca per caricare</div>
-    </div>
-    <div class="upload-card" id="card-genpde">
-      <input type="file" accept=".xlsx,.xls" onchange="handleFile(event,'generiPDE')">
-      <div class="upload-card-icon">🏷️</div>
-      <div class="upload-card-label">GENERI PDE</div>
-      <div class="upload-card-name" id="name-generiPDE">Clicca per caricare</div>
-    </div>
-    <div class="upload-card" id="card-genmerc">
-      <input type="file" accept=".xlsx,.xls" onchange="handleFile(event,'generiMercato')">
-      <div class="upload-card-icon">🏷️</div>
-      <div class="upload-card-label">GENERI MERCATO</div>
-      <div class="upload-card-name" id="name-generiMercato">Clicca per caricare</div>
-    </div>
+  <div class="files-grid" id="filesGrid" style="display:none"></div>
+  <div class="progress-wrap" id="progressWrap">
+    <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+    <div class="progress-label" id="progressLabel"></div>
   </div>
   <div class="upload-actions">
-    <button class="btn btn-primary" id="btnElabora" onclick="elabora()" disabled>
-      <span>Elabora</span>
-    </button>
-    <button class="btn btn-ghost" onclick="resetAll()">Reset</button>
-    <span class="upload-status" id="uploadStatus">Carica tutti e 6 i file per procedere</span>
+    <button class="btn btn-primary" id="btnElabora" onclick="elabora()" disabled>Elabora e salva</button>
+    <button class="btn btn-ghost" onclick="resetUpload()">Reset</button>
+    <span class="status-txt" id="statusTxt">Carica i 6 file GFK per procedere</span>
   </div>
 </div>
 
 <!-- TABS -->
 <div class="tabs" id="tabsBar" style="display:none">
-  <div class="tab active" onclick="showTab('recap')">1 — Recap Mercato</div>
-  <div class="tab" onclick="showTab('pari')">2 — Pari Perimetro</div>
-  <div class="tab" onclick="showTab('quadratura')">3 — Quadratura</div>
-  <div class="tab" onclick="showTab('generi')">4 — Generi</div>
+  <div class="tab active" onclick="showTab('recap')">Recap Mercato</div>
+  <div class="tab" onclick="showTab('pari')">Pari Perimetro</div>
+  <div class="tab" onclick="showTab('quad')">Quadratura</div>
+  <div class="tab" onclick="showTab('generi')">Generi</div>
+  <div class="tab" onclick="showTab('top20')">Top 20</div>
 </div>
 
-<!-- MAIN -->
 <div class="main" id="mainContent">
   <div class="empty-state">
-    <div style="font-size:48px; margin-bottom:16px;">📈</div>
+    <div style="font-size:48px;margin-bottom:16px">📈</div>
     <h2>Nessun dato caricato</h2>
-    <p>Carica i 6 file GFK e clicca Elabora per visualizzare il dashboard</p>
+    <p>Carica i 6 file GFK e clicca Elabora, oppure seleziona una settimana dallo storico</p>
   </div>
 </div>
 
 <!-- MODAL MAPPATURA -->
-<div class="modal-overlay" id="mappingModal" style="display:none">
+<div class="modal-ov" id="mapModal" style="display:none">
   <div class="modal">
-    <div class="modal-header">
-      <div class="modal-header-icon">⚠️</div>
-      <div class="modal-header-text">
-        <h3>Editori non mappati</h3>
-        <p>Questi editori non sono presenti nel DB promozioni. Assegna una promozione per ciascuno.</p>
-      </div>
+    <div class="modal-hdr">
+      <h3>⚠️ Editori non mappati</h3>
+      <p>Questi editori non sono nel DB promozioni. Assegna una promozione a ciascuno — verrà salvata per le settimane future.</p>
     </div>
-    <div class="modal-body" id="mappingList"></div>
-    <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="skipMapping()">Salta (usa ALTRO)</button>
-      <button class="btn btn-primary" onclick="saveMapping()">
-        <span class="spinner" id="mappingSpinner" style="display:none"></span>
+    <div class="modal-body" id="mapList"></div>
+    <div class="modal-ftr">
+      <button class="btn btn-ghost" onclick="skipMap()">Salta (usa ALTRO)</button>
+      <button class="btn btn-primary" id="btnSaveMap" onclick="saveMap()">
+        <span class="spin" id="mapSpin" style="display:none"></span>
         Salva e continua
       </button>
     </div>
   </div>
 </div>
 
-<div id="toastContainer"></div>
+<div id="toasts"></div>
 
 <script>
-// ============================================================
-// SUPABASE
-// ============================================================
-const SUPA_URL = 'https://tdflwenlylhctxssatax.supabase.co';
-const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRkZmx3ZW5seWxoY3R4c3NhdGF4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYzMzgyNzYsImV4cCI6MjA5MTkxNDI3Nn0.l35qEL7LOvyYuI1McQlVqj4vbyTqmlevcmqWbTGYi2Q';
-const supabase = window.supabase.createClient(SUPA_URL, SUPA_KEY);
+// ─── CONFIG ─────────────────────────────────────────────────
+const SB_URL = 'https://tdflwenlylhctxssatax.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRkZmx3ZW5seWxoY3R4c3NhdGF4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYzMzgyNzYsImV4cCI6MjA5MTkxNDI3Nn0.l35qEL7LOvyYuI1McQlVqj4vbyTqmlevcmqWbTGYi2Q';
+const sb = window.supabase.createClient(SB_URL, SB_KEY);
 
-// ============================================================
-// PROMOZIONI LISTA
-// ============================================================
 const PROMOZIONI = [
   'ALTRO','AMAZON','BIBLIOMANIE PROMOBIGS','CORRAINI','DIFFUSIONE SAN PAOLO',
   'DISTRIBOOK','EDISES SRL','EDIZ. MEDICO SCIENTIFICHE','EMME PROMOZIONE',
@@ -657,7 +221,6 @@ const PROMOZIONI = [
   'SIMONE','TASCHEN','ZANICHELLI'
 ];
 
-// Gruppi promozione → etichetta
 const GRUPPI = {
   'GRANDI GRUPPI': ['MONDADORI','PROLIBRO','GIUNTI','FELTRINELLI'],
   'PDE + PDE SERVICE': ['PDE SERVIZI COMM. PER EDITORIA','PDE SERVICE'],
@@ -667,90 +230,55 @@ const GRUPPI = {
   'PEA': ['PEA ITALIA'],
 };
 
-function getGruppo(promo) {
-  for (const [g, promos] of Object.entries(GRUPPI)) {
-    if (promos.includes(promo)) return g;
+// ─── STATE ───────────────────────────────────────────────────
+let recognized = {};   // key → { file, type, meta, rows }
+let dbPromo = {};      // editore_gfk → promo_2026
+let unmapped = [];
+let currentWeekKey = null;
+let currentData = {};  // dati elaborati in memoria per il tab corrente
+let activeTab = 'recap';
+
+// ─── DRAG & DROP ─────────────────────────────────────────────
+const dropArea = document.getElementById('dropArea');
+dropArea.addEventListener('dragover', e => { e.preventDefault(); dropArea.classList.add('drag-over'); });
+dropArea.addEventListener('dragleave', () => dropArea.classList.remove('drag-over'));
+dropArea.addEventListener('drop', e => {
+  e.preventDefault();
+  dropArea.classList.remove('drag-over');
+  handleFiles(e.dataTransfer.files);
+});
+
+async function handleFiles(fileList) {
+  for (const f of fileList) {
+    const buf = await f.arrayBuffer();
+    const parsed = parseGFK(buf);
+    const type = detectType(parsed);
+    if (type) {
+      recognized[type] = { file: f, ...parsed };
+      // Se c'è già un tipo uguale, sovrascrive (utile per re-upload)
+    }
   }
-  return 'ALTRO';
+  renderFilePills();
+  checkReady();
 }
 
-// ============================================================
-// STATE
-// ============================================================
-const files = {};
-const parsedData = {};
-let dbPromo = {}; // editore → promo_2026
-let unmappedEditors = [];
-let pendingMappings = {};
-let weekLabel = '';
-
-// ============================================================
-// FILE HANDLING
-// ============================================================
-function handleFile(e, key) {
-  const file = e.target.files[0];
-  if (!file) return;
-  files[key] = file;
-  document.getElementById('name-' + key).textContent = file.name;
-  document.getElementById('card-' + keyToCard(key)).classList.add('loaded');
-  checkAllLoaded();
-}
-
-function keyToCard(key) {
-  return {
-    gfk2026:'gfk26', gfk2025:'gfk25',
-    top20week:'top20w', top20tot:'top20t',
-    generiPDE:'genpde', generiMercato:'genmerc'
-  }[key];
-}
-
-function checkAllLoaded() {
-  const keys = ['gfk2026','gfk2025','top20week','top20tot','generiPDE','generiMercato'];
-  const loaded = keys.every(k => files[k]);
-  document.getElementById('btnElabora').disabled = !loaded;
-  document.getElementById('uploadStatus').textContent = loaded
-    ? 'Tutti i file caricati. Pronto per elaborare.'
-    : `${keys.filter(k=>files[k]).length}/6 file caricati`;
-}
-
-function resetAll() {
-  Object.keys(files).forEach(k => delete files[k]);
-  Object.keys(parsedData).forEach(k => delete parsedData[k]);
-  ['gfk2026','gfk2025','top20week','top20tot','generiPDE','generiMercato'].forEach(k => {
-    document.getElementById('name-'+k).textContent = 'Clicca per caricare';
-    document.getElementById('card-'+keyToCard(k)).classList.remove('loaded');
-  });
-  document.getElementById('btnElabora').disabled = true;
-  document.getElementById('tabsBar').style.display = 'none';
-  document.getElementById('mainContent').innerHTML = `
-    <div class="empty-state">
-      <div style="font-size:48px;margin-bottom:16px;">📈</div>
-      <h2>Nessun dato caricato</h2>
-      <p>Carica i 6 file GFK e clicca Elabora per visualizzare il dashboard</p>
-    </div>`;
-  document.getElementById('headerWeek').textContent = 'Nessun dato caricato';
-  checkAllLoaded();
-}
-
-// ============================================================
-// PARSER GFK (struttura uniforme: 16 righe metadati, header R16, dati da R17)
-// ============================================================
-function parseGFK(arrayBuffer) {
-  const wb = XLSX.read(arrayBuffer, {type:'array'});
+// ─── PARSER ──────────────────────────────────────────────────
+function parseGFK(buf) {
+  const wb = XLSX.read(buf, { type: 'array' });
   const ws = wb.Sheets[wb.SheetNames[0]];
-  const raw = XLSX.utils.sheet_to_json(ws, {header:1, defval:null});
+  const raw = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null });
 
-  // Leggi metadati
   const meta = {};
   for (let i = 0; i < 16; i++) {
-    const row = raw[i];
-    if (row && row[0] && row[1]) meta[String(row[0]).trim()] = String(row[1]).trim();
-    if (row && row[0] === 'Period') meta.period = String(row[1]).trim();
-    if (row && row[0] === 'Compare period') meta.comparePeriod = String(row[1]).trim();
+    const r = raw[i];
+    if (!r) continue;
+    const k = r[0] != null ? String(r[0]).trim() : null;
+    const v = r[1] != null ? String(r[1]).trim() : null;
+    if (k && v) meta[k] = v;
   }
 
-  // Header a riga 16 (indice 16), dati da 17
-  const headers = (raw[16] || []).map((h,i) => h != null ? String(h).trim() : `col${i}`);
+  // Header a riga 16, dati da 17
+  const headers = (raw[16] || []).map((h, i) => h != null ? String(h).trim() : `_c${i}`);
   const rows = [];
   for (let i = 17; i < raw.length; i++) {
     const r = raw[i];
@@ -762,553 +290,729 @@ function parseGFK(arrayBuffer) {
   return { meta, headers, rows };
 }
 
-// ============================================================
-// ELABORA
-// ============================================================
-async function elabora() {
+function detectType({ meta, headers, rows }) {
+  const period = meta['Period'] || '';
+  const publisher = meta['Publisher'] || '';
+  const genre = meta['Genre'] || '';
+
+  const hasTitle = headers.includes('Title');
+  const hasPublisher = headers.includes('Publisher');
+  const hasGenre = headers.includes('Genre');
+  const hasCompare = !!meta['Compare period'];
+
+  // GENERI: hanno Compare period e colonna Genre
+  if (hasCompare && hasGenre) {
+    // PDE = publisher filtrati (lista lunga), Mercato = All
+    return publisher === 'All' ? 'generiMercato' : 'generiPDE';
+  }
+
+  // TOP 20: hanno Title
+  if (hasTitle) {
+    // WEEK = period singola (es "CW 20 2026"), TOTALE = range
+    return period.includes('-') ? 'top20tot' : 'top20week';
+  }
+
+  // DATI GFK publisher: hanno Publisher ma no Title
+  if (hasPublisher && !hasTitle) {
+    // Distingui anno dal period
+    const year = period.match(/(\d{4})/)?.[1];
+    return year === '2025' ? 'gfk2025' : 'gfk2026';
+  }
+
+  return null;
+}
+
+const TYPE_LABELS = {
+  gfk2026: { icon: '📊', label: 'DATI GFK 2026' },
+  gfk2025: { icon: '📊', label: 'DATI GFK 2025' },
+  top20week: { icon: '📋', label: 'TOP 20 WEEK' },
+  top20tot: { icon: '📋', label: 'TOP 20 TOTALE' },
+  generiPDE: { icon: '🏷️', label: 'GENERI PDE' },
+  generiMercato: { icon: '🏷️', label: 'GENERI MERCATO' },
+};
+const ALL_TYPES = Object.keys(TYPE_LABELS);
+
+function renderFilePills() {
+  const grid = document.getElementById('filesGrid');
+  grid.style.display = 'grid';
+  grid.innerHTML = ALL_TYPES.map(type => {
+    const r = recognized[type];
+    const { icon, label } = TYPE_LABELS[type];
+    if (r) {
+      return `<div class="file-pill ok">
+        <span class="file-pill-icon">${icon}</span>
+        <div class="file-pill-info">
+          <div class="file-pill-type">${label} ✓</div>
+          <div class="file-pill-name">${r.file.name}</div>
+        </div>
+      </div>`;
+    } else {
+      return `<div class="file-pill">
+        <span class="file-pill-icon">⬜</span>
+        <div class="file-pill-info">
+          <div class="file-pill-type">${label}</div>
+          <div class="file-pill-name" style="color:var(--text3)">In attesa...</div>
+        </div>
+      </div>`;
+    }
+  }).join('');
+}
+
+function checkReady() {
+  const loaded = ALL_TYPES.filter(t => recognized[t]).length;
+  const ready = loaded === 6;
+  document.getElementById('btnElabora').disabled = !ready;
+  document.getElementById('statusTxt').textContent = ready
+    ? `Tutti e 6 i file riconosciuti. Pronto per elaborare.`
+    : `${loaded}/6 file riconosciuti`;
+}
+
+function resetUpload() {
+  recognized = {};
+  document.getElementById('filesGrid').style.display = 'none';
+  document.getElementById('filesGrid').innerHTML = '';
+  document.getElementById('progressWrap').style.display = 'none';
   document.getElementById('btnElabora').disabled = true;
-  document.getElementById('uploadStatus').textContent = 'Parsing file in corso...';
+  document.getElementById('statusTxt').textContent = 'Carica i 6 file GFK per procedere';
+  document.getElementById('fileInput').value = '';
+}
 
+// ─── ELABORA ─────────────────────────────────────────────────
+async function elabora() {
+  setProgress(0, 'Carico DB promozioni...');
   try {
-    // Carica DB promozioni da Supabase
     await loadDBPromo();
+    setProgress(15, 'Ricerca editori non mappati...');
 
-    // Parsa tutti i file
-    for (const [key, file] of Object.entries(files)) {
-      const buf = await file.arrayBuffer();
-      parsedData[key] = parseGFK(buf);
-    }
+    const editori26 = [...new Set(
+      recognized.gfk2026.rows
+        .filter(r => r['Publisher'] && r['Publisher'] !== 'Total')
+        .map(r => r['Publisher'])
+    )];
+    unmapped = editori26.filter(e => !dbPromo[e]);
 
-    // Determina settimana dal file GFK 2026
-    const period = parsedData.gfk2026?.meta?.period || '';
-    weekLabel = period;
-    document.getElementById('headerWeek').textContent = period || 'Settimana corrente';
-
-    // Trova editori non mappati (solo nel file GFK 2026 publisher)
-    const editori26 = parsedData.gfk2026.rows
-      .map(r => r['Publisher'])
-      .filter(Boolean)
-      .filter(e => e !== 'Total');
-
-    unmappedEditors = editori26.filter(e => !dbPromo[e] && e !== 'Total');
-    // Rimuovi duplicati
-    unmappedEditors = [...new Set(unmappedEditors)];
-
-    if (unmappedEditors.length > 0) {
-      showMappingModal();
+    if (unmapped.length > 0) {
+      showMapModal();
     } else {
-      renderDashboard();
+      await doElabora();
     }
-
-  } catch(err) {
-    console.error(err);
-    showToast('Errore durante l\'elaborazione: ' + err.message, 'error');
-    document.getElementById('btnElabora').disabled = false;
-    document.getElementById('uploadStatus').textContent = 'Errore. Riprova.';
+  } catch (e) {
+    toast('Errore: ' + e.message, 'err');
+    hideProgress();
   }
 }
 
-async function loadDBPromo() {
-  dbPromo = {};
-  let from = 0;
-  const pageSize = 1000;
-  while (true) {
-    const { data, error } = await supabase
-      .from('editore_promozione')
-      .select('editore_gfk, promo_2026')
-      .range(from, from + pageSize - 1);
-    if (error) throw error;
-    if (!data || data.length === 0) break;
-    data.forEach(r => { dbPromo[r.editore_gfk] = r.promo_2026; });
-    if (data.length < pageSize) break;
-    from += pageSize;
-  }
-}
+async function doElabora() {
+  setProgress(25, 'Calcolo aggregazioni...');
 
-// ============================================================
-// MAPPING MODAL
-// ============================================================
-function showMappingModal() {
-  pendingMappings = {};
-  const list = document.getElementById('mappingList');
-  list.innerHTML = unmappedEditors.map(e => `
-    <div class="modal-row">
-      <div class="modal-row-name">
-        ${e}
-        <span>Non trovato nel DB promozioni</span>
-      </div>
-      <select class="modal-select" id="sel_${CSS.escape(e)}" data-editor="${e}">
-        ${PROMOZIONI.map(p => `<option value="${p}"${p==='ALTRO'?' selected':''}>${p}</option>`).join('')}
-      </select>
-    </div>
-  `).join('');
-  document.getElementById('mappingModal').style.display = 'flex';
-}
+  // Determina week_key dal file GFK 2026
+  const period26 = recognized.gfk2026.meta['Period'] || '';
+  // Normalizza: "CW 01 2026 - CW 20 2026" → "CW01-20_2026"
+  const weekKey = normalizeWeekKey(period26);
+  const yearMatch = period26.match(/(\d{4})/);
+  const anno = yearMatch ? parseInt(yearMatch[1]) : 2026;
+  const cwMatch = period26.match(/CW\s*(\d+)/gi) || [];
+  const cwFrom = cwMatch[0] ? parseInt(cwMatch[0].replace(/\D/g,'')) : null;
+  const cwTo = cwMatch[cwMatch.length-1] ? parseInt(cwMatch[cwMatch.length-1].replace(/\D/g,'')) : null;
 
-function skipMapping() {
-  // Assegna ALTRO a tutti i non mappati
-  unmappedEditors.forEach(e => { dbPromo[e] = 'ALTRO'; });
-  document.getElementById('mappingModal').style.display = 'none';
-  renderDashboard();
-}
+  currentWeekKey = weekKey;
 
-async function saveMapping() {
-  const spinner = document.getElementById('mappingSpinner');
-  spinner.style.display = 'inline-block';
+  // ── Aggrega recap ──
+  const agg26p = aggPerPromo(recognized.gfk2026.rows, recognized.gfk2025.rows, false);
+  const agg26q = aggPerPromo(recognized.gfk2026.rows, recognized.gfk2025.rows, true);
 
-  const rows = document.querySelectorAll('#mappingList .modal-row');
-  const upserts = [];
-  rows.forEach(row => {
-    const sel = row.querySelector('select');
-    const editor = sel.dataset.editor;
-    const promo = sel.value;
-    dbPromo[editor] = promo;
-    upserts.push({ editore_gfk: editor, promo_2026: promo, promo_2025: promo });
-  });
+  setProgress(40, 'Salvo settimana su Supabase...');
 
-  try {
-    const { error } = await supabase
-      .from('editore_promozione')
-      .upsert(upserts, { onConflict: 'editore_gfk' });
-    if (error) throw error;
-    showToast(`✓ ${upserts.length} mappature salvate su Supabase`, 'success');
-  } catch(err) {
-    showToast('Errore salvataggio: ' + err.message, 'error');
-  }
+  // Upsert settimana
+  const { error: e1 } = await sb.from('qdm_settimane').upsert(
+    { week_key: weekKey, anno, cw_from: cwFrom, cw_to: cwTo },
+    { onConflict: 'week_key' }
+  );
+  if (e1) throw e1;
 
-  spinner.style.display = 'none';
-  document.getElementById('mappingModal').style.display = 'none';
-  renderDashboard();
-}
+  setProgress(55, 'Salvo dati recap...');
 
-// ============================================================
-// AGGREGAZIONI
-// ============================================================
-function aggregaPerPromo(rows2026, rows2025) {
-  // rows da GFK publisher: Publisher, Value, Value%, Units, Units%, Ø-Price
-  // Aggrega per promozione
-  const agg = {};
-
-  function addRow(promo, row, year) {
-    if (!agg[promo]) agg[promo] = {
-      v26:0, u26:0, v25:0, u25:0, vqp26:0, uqp26:0, vqp25:0, uqp25:0
+  // Prepara righe recap (unione pari+quad)
+  const allPromo = new Set([...Object.keys(agg26p), ...Object.keys(agg26q)]);
+  const recapRows = [...allPromo].map(p => {
+    const dp = agg26p[p] || {};
+    const dq = agg26q[p] || {};
+    const totV26 = Object.values(agg26p).reduce((s,d)=>s+(d.v26||0),0);
+    const totU26 = Object.values(agg26p).reduce((s,d)=>s+(d.u26||0),0);
+    const totV25p = Object.values(agg26p).reduce((s,d)=>s+(d.v25||0),0);
+    const totU25p = Object.values(agg26p).reduce((s,d)=>s+(d.u25||0),0);
+    const totV25q = Object.values(agg26q).reduce((s,d)=>s+(d.v25||0),0);
+    const totU25q = Object.values(agg26q).reduce((s,d)=>s+(d.u25||0),0);
+    return {
+      week_key: weekKey, promozione: p,
+      value_26: dp.v26||0, units_26: dp.u26||0,
+      pm_26: dp.u26 ? dp.v26/dp.u26 : 0,
+      qdm_value_26: totV26 ? (dp.v26||0)/totV26 : 0,
+      qdm_units_26: totU26 ? (dp.u26||0)/totU26 : 0,
+      value_25p: dp.v25||0, units_25p: dp.u25||0,
+      pm_25p: dp.u25 ? dp.v25/dp.u25 : 0,
+      qdm_value_25p: totV25p ? (dp.v25||0)/totV25p : 0,
+      qdm_units_25p: totU25p ? (dp.u25||0)/totU25p : 0,
+      value_25q: dq.v25||0, units_25q: dq.u25||0,
+      pm_25q: dq.u25 ? dq.v25/dq.u25 : 0,
+      qdm_value_25q: totV25q ? (dq.v25||0)/totV25q : 0,
+      qdm_units_25q: totU25q ? (dq.u25||0)/totU25q : 0,
     };
-    const val = parseFloat(row['Value']) || 0;
-    const unit = parseFloat(row['Units']) || 0;
-    const vp = parseFloat(row['Value %']) || 0;
-    const up = parseFloat(row['Units %']) || 0;
-    if (year === 2026) {
-      agg[promo].v26 += val;
-      agg[promo].u26 += unit;
-      agg[promo].vqp26 += vp;
-      agg[promo].uqp26 += up;
-    } else {
-      agg[promo].v25 += val;
-      agg[promo].u25 += unit;
-      agg[promo].vqp25 += vp;
-      agg[promo].uqp25 += up;
-    }
+  });
+
+  // Delete + insert (più sicuro di upsert per array)
+  await sb.from('qdm_recap').delete().eq('week_key', weekKey);
+  const { error: e2 } = await sb.from('qdm_recap').insert(recapRows);
+  if (e2) throw e2;
+
+  setProgress(70, 'Salvo generi...');
+
+  // Generi PDE
+  const genPDE = parseGeneri(recognized.generiPDE.rows, 'PDE', weekKey);
+  const genMerc = parseGeneri(recognized.generiMercato.rows, 'MERCATO', weekKey);
+  await sb.from('qdm_generi').delete().eq('week_key', weekKey);
+  const { error: e3 } = await sb.from('qdm_generi').insert([...genPDE, ...genMerc]);
+  if (e3) throw e3;
+
+  setProgress(82, 'Salvo Top 20...');
+
+  // Top 20
+  const top20w = parseTop20(recognized.top20week.rows, 'WEEK', weekKey);
+  const top20t = parseTop20(recognized.top20tot.rows, 'TOTALE', weekKey);
+  await sb.from('qdm_top20').delete().eq('week_key', weekKey);
+  if (top20w.length || top20t.length) {
+    const { error: e4 } = await sb.from('qdm_top20').insert([...top20w, ...top20t]);
+    if (e4) throw e4;
   }
 
-  rows2026.filter(r => r['Publisher'] && r['Publisher'] !== 'Total').forEach(r => {
-    const promo = dbPromo[r['Publisher']] || 'ALTRO';
-    addRow(promo, r, 2026);
-  });
-  rows2025.filter(r => r['Publisher'] && r['Publisher'] !== 'Total').forEach(r => {
-    const promo = dbPromo[r['Publisher']] || 'ALTRO';
-    addRow(promo, r, 2025);
-  });
+  setProgress(95, 'Aggiorno lista settimane...');
+  await loadWeekList();
 
+  setProgress(100, 'Completato!');
+  setTimeout(hideProgress, 800);
+
+  // Carica e mostra
+  await loadWeek(weekKey);
+  toast(`✓ Settimana ${weekKey} salvata correttamente`, 'ok');
+}
+
+function normalizeWeekKey(period) {
+  // "CW 01 2026 - CW 20 2026" → "2026_CW01-CW20"
+  // "CW 20 2026" → "2026_CW20"
+  const cws = period.match(/CW\s*(\d+)/gi) || [];
+  const year = (period.match(/(\d{4})/) || [])[1] || '';
+  if (cws.length >= 2) {
+    const a = cws[0].replace(/\s/,'');
+    const b = cws[cws.length-1].replace(/\s/,'');
+    return `${year}_${a}-${b}`;
+  }
+  return `${year}_${(cws[0]||'CW?').replace(/\s/,'')}`;
+}
+
+// ─── AGGREGAZIONI ────────────────────────────────────────────
+function aggPerPromo(rows26, rows25, quadratura) {
+  const agg = {};
+  const set26 = new Set(rows26.filter(r=>r['Publisher']&&r['Publisher']!=='Total').map(r=>r['Publisher']));
+  const set25 = new Set(rows25.filter(r=>r['Publisher']&&r['Publisher']!=='Total').map(r=>r['Publisher']));
+  const comuni = quadratura ? set26 : new Set([...set26].filter(e=>set25.has(e)));
+
+  rows26.filter(r=>r['Publisher']&&r['Publisher']!=='Total'&&comuni.has(r['Publisher'])).forEach(r=>{
+    const p = dbPromo[r['Publisher']] || 'ALTRO';
+    if (!agg[p]) agg[p]={v26:0,u26:0,v25:0,u25:0};
+    agg[p].v26 += parseFloat(r['Value'])||0;
+    agg[p].u26 += parseFloat(r['Units'])||0;
+  });
+  rows25.filter(r=>r['Publisher']&&r['Publisher']!=='Total'&&comuni.has(r['Publisher'])).forEach(r=>{
+    const p = dbPromo[r['Publisher']] || 'ALTRO';
+    if (!agg[p]) agg[p]={v26:0,u26:0,v25:0,u25:0};
+    agg[p].v25 += parseFloat(r['Value'])||0;
+    agg[p].u25 += parseFloat(r['Units'])||0;
+  });
   return agg;
 }
 
-function getTotal(rows, field) {
-  const totRow = rows.find(r => r['Publisher'] === 'Total' || r['Rank'] === 'Total');
-  return totRow ? (parseFloat(totRow[field]) || 0) : 0;
+function parseGeneri(rows, tipo, weekKey) {
+  return rows
+    .filter(r => r['Genre'] && String(r['Genre']).toLowerCase() !== 'total' &&
+                 String(r['ID']||'').toLowerCase() !== 'total')
+    .map(r => {
+      const ks = Object.keys(r);
+      return {
+        week_key: weekKey, tipo,
+        genre_id: String(r['ID']||''),
+        genre: r['Genre'],
+        value_26: parseFloat(r[ks[2]])||0,
+        value_pct_26: parseFloat(r[ks[3]])||0,
+        units_26: parseFloat(r[ks[4]])||0,
+        pm_26: parseFloat(r[ks[6]])||0,
+        value_25: parseFloat(r[ks[7]])||0,
+        value_pct_25: parseFloat(r[ks[8]])||0,
+        units_25: parseFloat(r[ks[9]])||0,
+        pm_25: parseFloat(r[ks[11]])||0,
+        delta_value: parseFloat(r[ks[13]])||0,
+        delta_units: parseFloat(r[ks[15]])||0,
+      };
+    });
 }
 
-// ============================================================
-// RENDER DASHBOARD
-// ============================================================
-function renderDashboard() {
+function parseTop20(rows, tipo, weekKey) {
+  return rows
+    .filter(r => r['Rank'] && r['Rank'] !== 'Total' && !isNaN(parseInt(r['Rank'])))
+    .slice(0, 20)
+    .map(r => {
+      const rank = parseInt(r['Rank']);
+      const pub = r['Publisher'] || '';
+      return {
+        week_key: weekKey, tipo, rank_pos: rank,
+        title: r['Title']||'',
+        author: r['Author']||'',
+        publisher: pub,
+        promozione: dbPromo[pub] || 'ALTRO',
+        ean: String(r['ISBN / EAN']||r['EAN']||''),
+        cover_price: parseFloat(r['Cover price'])||0,
+        genre: r['Genre']||r['Genre level 1']||'',
+        value: parseFloat(r['Value'])||0,
+        value_pct: parseFloat(r['Value %'])||0,
+        units: parseInt(r['Units'])||0,
+        units_pct: parseFloat(r['Units %'])||0,
+        pm: parseFloat(r['Ø-Price'])||0,
+      };
+    });
+}
+
+// ─── DB PROMO ────────────────────────────────────────────────
+async function loadDBPromo() {
+  dbPromo = {};
+  let from = 0;
+  while (true) {
+    const { data, error } = await sb.from('editore_promozione').select('editore_gfk,promo_2026').range(from, from+999);
+    if (error) throw error;
+    if (!data?.length) break;
+    data.forEach(r => { dbPromo[r.editore_gfk] = r.promo_2026; });
+    if (data.length < 1000) break;
+    from += 1000;
+  }
+}
+
+// ─── MAPPING MODAL ───────────────────────────────────────────
+function showMapModal() {
+  const list = document.getElementById('mapList');
+  list.innerHTML = unmapped.map(e => `
+    <div class="mrow">
+      <div class="mrow-name">${e}<small>Non trovato nel DB promozioni</small></div>
+      <select class="msel" data-editor="${e}">
+        ${PROMOZIONI.map(p=>`<option value="${p}"${p==='ALTRO'?' selected':''}>${p}</option>`).join('')}
+      </select>
+    </div>`).join('');
+  document.getElementById('mapModal').style.display = 'flex';
+}
+
+function skipMap() {
+  unmapped.forEach(e => { dbPromo[e] = 'ALTRO'; });
+  document.getElementById('mapModal').style.display = 'none';
+  doElabora();
+}
+
+async function saveMap() {
+  document.getElementById('mapSpin').style.display = 'inline-block';
+  const upserts = [...document.querySelectorAll('#mapList select')].map(s => ({
+    editore_gfk: s.dataset.editor,
+    promo_2026: s.value,
+    promo_2025: s.value
+  }));
+  upserts.forEach(u => { dbPromo[u.editore_gfk] = u.promo_2026; });
+  const { error } = await sb.from('editore_promozione').upsert(upserts, { onConflict: 'editore_gfk' });
+  if (error) toast('Errore salvataggio mappature: ' + error.message, 'err');
+  else toast(`✓ ${upserts.length} mappature salvate`, 'ok');
+  document.getElementById('mapSpin').style.display = 'none';
+  document.getElementById('mapModal').style.display = 'none';
+  doElabora();
+}
+
+// ─── STORICO ─────────────────────────────────────────────────
+async function loadWeekList() {
+  const { data } = await sb.from('qdm_settimane').select('*').order('anno,cw_to', { ascending: false });
+  const sel = document.getElementById('weekSelect');
+  if (!data?.length) { sel.style.display = 'none'; return; }
+  sel.style.display = 'block';
+  sel.innerHTML = '<option value="">— Seleziona settimana —</option>' +
+    data.map(w => `<option value="${w.week_key}" ${w.week_key===currentWeekKey?'selected':''}>${w.week_key.replace('_',' ')}</option>`).join('');
+}
+
+async function loadWeek(weekKey) {
+  if (!weekKey) return;
+  currentWeekKey = weekKey;
+  document.getElementById('weekBadge').textContent = weekKey.replace('_',' ');
+  document.getElementById('weekBadge').style.display = 'block';
   document.getElementById('tabsBar').style.display = 'flex';
-  showTab('recap');
-  document.getElementById('btnElabora').disabled = false;
-  document.getElementById('uploadStatus').textContent = 'Dashboard aggiornato ✓';
+
+  // Carica tutti i dati da Supabase
+  const [recap, generi, top20] = await Promise.all([
+    sb.from('qdm_recap').select('*').eq('week_key', weekKey),
+    sb.from('qdm_generi').select('*').eq('week_key', weekKey),
+    sb.from('qdm_top20').select('*').eq('week_key', weekKey),
+  ]);
+
+  currentData = {
+    recap: recap.data || [],
+    generi: generi.data || [],
+    top20: top20.data || [],
+  };
+
+  showTab(activeTab);
 }
 
+// ─── TABS ────────────────────────────────────────────────────
 function showTab(tab) {
+  activeTab = tab;
   document.querySelectorAll('.tab').forEach((t,i) => {
-    t.classList.toggle('active', ['recap','pari','quadratura','generi'][i] === tab);
+    t.classList.toggle('active', ['recap','pari','quad','generi','top20'][i] === tab);
   });
   const mc = document.getElementById('mainContent');
+  if (!currentData.recap?.length) {
+    mc.innerHTML = `<div class="empty-state"><div style="font-size:48px;margin-bottom:16px">📈</div><h2>Nessun dato</h2></div>`;
+    return;
+  }
   if (tab === 'recap') mc.innerHTML = buildRecap();
-  else if (tab === 'pari') mc.innerHTML = buildPariPerimetro();
-  else if (tab === 'quadratura') mc.innerHTML = buildQuadratura();
+  else if (tab === 'pari') mc.innerHTML = buildTabellone(false);
+  else if (tab === 'quad') mc.innerHTML = buildTabellone(true);
   else if (tab === 'generi') mc.innerHTML = buildGeneri();
+  else if (tab === 'top20') mc.innerHTML = buildTop20();
 }
 
-// -------- RECAP --------
+// ─── RENDER RECAP ────────────────────────────────────────────
 function buildRecap() {
-  const r26 = parsedData.gfk2026.rows;
-  const r25 = parsedData.gfk2025.rows;
+  const rows = currentData.recap;
+  const totV26 = rows.reduce((s,r)=>s+(r.value_26||0),0);
+  const totU26 = rows.reduce((s,r)=>s+(r.units_26||0),0);
+  const totV25 = rows.reduce((s,r)=>s+(r.value_25p||0),0);
+  const totU25 = rows.reduce((s,r)=>s+(r.units_25p||0),0);
+  const pm26 = totU26 ? totV26/totU26 : 0;
+  const pm25 = totU25 ? totV25/totU25 : 0;
 
-  const tot26 = r26.find(r => r['Publisher'] === 'Total' || String(r['Rank']).toLowerCase() === 'total') || {};
-  const tot25 = r25.find(r => r['Publisher'] === 'Total' || String(r['Rank']).toLowerCase() === 'total') || {};
-
-  const v26 = parseFloat(tot26['Value']) || 0;
-  const v25 = parseFloat(tot25['Value']) || 0;
-  const u26 = parseFloat(tot26['Units']) || 0;
-  const u25 = parseFloat(tot25['Units']) || 0;
-  const pm26 = v26 / (u26 || 1);
-  const pm25 = v25 / (u25 || 1);
-
-  const dv = v26/v25-1, du = u26/u25-1, dpm = pm26/pm25-1;
-
-  // Prezzi medi per gruppo (da aggregazione)
-  const agg = aggregaPerPromo(r26, r25);
-
-  // Costruisce tabella prezzi medi per gruppi principali
+  // Prezzi medi per gruppo
   const gruppiRows = Object.entries(GRUPPI).map(([g, promos]) => {
     let tv26=0,tu26=0,tv25=0,tu25=0;
     promos.forEach(p => {
-      if (agg[p]) { tv26+=agg[p].v26; tu26+=agg[p].u26; tv25+=agg[p].v25; tu25+=agg[p].u25; }
+      const r = rows.find(x=>x.promozione===p);
+      if(r){tv26+=r.value_26||0;tu26+=r.units_26||0;tv25+=r.value_25p||0;tu25+=r.units_25p||0;}
     });
-    const pm26g = tv26/(tu26||1), pm25g = tv25/(tu25||1);
-    return { g, pm26: pm26g, pm25: pm25g };
+    return {g, pm26:tu26?tv26/tu26:0, pm25:tu25?tv25/tu25:0};
   });
 
-  return `
-  <div class="recap-grid">
-    <div class="recap-block">
-      <div class="recap-block-header">
-        <div class="recap-block-title">MERCATO TOTALE</div>
-        <div class="recap-block-badge">${weekLabel}</div>
-      </div>
-      <div class="recap-metrics">
-        <div class="metric">
-          <div class="metric-label">Value 2026</div>
-          <div class="metric-value">${fmtM(v26)}</div>
-          <div class="metric-delta ${dv>=0?'pos':'neg'}">${fmtPct(dv)} vs 2025</div>
-          <div class="metric-sub">Diff: +${fmtM(v26-v25)}</div>
-        </div>
-        <div class="metric">
-          <div class="metric-label">Units 2026</div>
-          <div class="metric-value">${fmtK(u26)}</div>
-          <div class="metric-delta ${du>=0?'pos':'neg'}">${fmtPct(du)} vs 2025</div>
-          <div class="metric-sub">Diff: +${fmtK(u26-u25)}</div>
-        </div>
-        <div class="metric">
-          <div class="metric-label">Prezzo Medio</div>
-          <div class="metric-value">${fmtEur(pm26)}</div>
-          <div class="metric-delta ${dpm>=0?'pos':'neg'}">${fmtPct(dpm)} vs 2025</div>
-          <div class="metric-sub">2025: ${fmtEur(pm25)}</div>
-        </div>
-      </div>
-    </div>
+  const sorted = [...rows].filter(r=>r.promozione!=='ALTRO').sort((a,b)=>b.value_26-a.value_26);
+  const altro = rows.find(r=>r.promozione==='ALTRO');
+  const allRows = altro ? [...sorted, altro] : sorted;
 
-    <div class="recap-block">
-      <div class="recap-block-header">
-        <div class="recap-block-title">PREZZI MEDI PER GRUPPO</div>
+  return `
+  <div class="metrics-row">
+    <div class="metric-card">
+      <div class="mc-label">Value 2026</div>
+      <div class="mc-val">${fmtM(totV26)}</div>
+      <div class="mc-delta ${totV25?delta(totV26,totV25)>=0?'pos':'neg':''}">
+        ${totV25 ? fmtPct(delta(totV26,totV25))+' vs 2025' : '—'}
       </div>
-      <div class="promo-table-wrap">
-        <table class="promo-table">
-          <thead>
-            <tr>
-              <th>Gruppo</th>
-              <th>PM 2026</th>
-              <th>PM 2025</th>
-              <th>Δ%</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${gruppiRows.map(row => {
-              const d = row.pm26/row.pm25-1;
-              return `<tr>
-                <td>${row.g}</td>
-                <td>${fmtEur(row.pm26)}</td>
-                <td>${fmtEur(row.pm25)}</td>
-                <td class="${d>=0?'pos':'neg'}">${fmtPct(d)}</td>
-              </tr>`;
-            }).join('')}
-          </tbody>
-        </table>
+      <div class="mc-sub">2025: ${fmtM(totV25)}</div>
+    </div>
+    <div class="metric-card">
+      <div class="mc-label">Units 2026</div>
+      <div class="mc-val">${fmtK(totU26)}</div>
+      <div class="mc-delta ${totU25?delta(totU26,totU25)>=0?'pos':'neg':''}">
+        ${totU25 ? fmtPct(delta(totU26,totU25))+' vs 2025' : '—'}
       </div>
+      <div class="mc-sub">2025: ${fmtK(totU25)}</div>
+    </div>
+    <div class="metric-card">
+      <div class="mc-label">Prezzo Medio 2026</div>
+      <div class="mc-val">${fmtEur(pm26)}</div>
+      <div class="mc-delta ${pm25?delta(pm26,pm25)>=0?'pos':'neg':''}">
+        ${pm25 ? fmtPct(delta(pm26,pm25))+' vs 2025' : '—'}
+      </div>
+      <div class="mc-sub">2025: ${fmtEur(pm25)}</div>
     </div>
   </div>
 
-  <div class="recap-block" style="margin-bottom:20px;">
-    <div class="recap-block-header">
-      <div class="recap-block-title">QUOTE DI MERCATO (VALUE %) — 2026 vs 2025</div>
-    </div>
-    <div class="promo-table-wrap">
-      <table class="promo-table">
-        <thead>
-          <tr>
-            <th>Promozione</th>
-            <th>Value 2026</th>
-            <th>Units 2026</th>
-            <th>QDM Value 2026</th>
-            <th>QDM Value 2025</th>
-            <th>Δ QDM Value</th>
-            <th>PM 2026</th>
-          </tr>
-        </thead>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;">
+    <div class="blk">
+      <div class="blk-hdr"><span class="blk-title">PM per Gruppo — 2026 vs 2025</span></div>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th class="l">Gruppo</th><th class="r">PM 2026</th><th class="r">PM 2025</th><th class="r">Δ%</th></tr></thead>
         <tbody>
-          ${buildPromoRows(agg, v26, u26, v25, u25)}
+          ${gruppiRows.map(({g,pm26,pm25})=>`<tr>
+            <td class="l">${g}</td>
+            <td>${fmtEur(pm26)}</td><td>${fmtEur(pm25)}</td>
+            <td class="${pm25&&delta(pm26,pm25)>=0?'pos':'neg'}">${pm25?fmtPct(delta(pm26,pm25)):'—'}</td>
+          </tr>`).join('')}
         </tbody>
-      </table>
+      </table></div>
     </div>
+    <div class="blk">
+      <div class="blk-hdr"><span class="blk-title">Quote Value % per Promozione</span></div>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th class="l">Promozione</th><th class="r">QDM 2026</th><th class="r">QDM 2025</th><th class="r">Δ pp</th></tr></thead>
+        <tbody>
+          ${allRows.map(r=>{
+            const d = (r.qdm_value_26||0)-(r.qdm_value_25p||0);
+            return `<tr>
+              <td class="l">${r.promozione}</td>
+              <td>${fmtPct2(r.qdm_value_26)}</td>
+              <td>${fmtPct2(r.qdm_value_25p)}</td>
+              <td class="${d>=0?'pos':'neg'}">${d>=0?'+':''}${(d*100).toLocaleString('it-IT',{minimumFractionDigits:2,maximumFractionDigits:2})} pp</td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table></div>
+    </div>
+  </div>
+
+  <div class="blk">
+    <div class="blk-hdr"><span class="blk-title">Dettaglio per Promozione — Value / Units / PM</span></div>
+    <div class="tbl-wrap"><table>
+      <thead>
+        <tr class="thead-group">
+          <th class="l" rowspan="2">Promozione</th>
+          <th colspan="4">2026</th>
+          <th colspan="4">2025 (Parità)</th>
+          <th colspan="3">Δ 2026 vs 2025</th>
+        </tr>
+        <tr>
+          <th class="r">Value</th><th class="r">Units</th><th class="r">PM</th><th class="r">QDM Val%</th>
+          <th class="r">Value</th><th class="r">Units</th><th class="r">PM</th><th class="r">QDM Val%</th>
+          <th class="r">Δ Val%</th><th class="r">Δ Unit%</th><th class="r">Δ PM%</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="tot">
+          <td class="l">Totale</td>
+          <td>${fmtM(totV26)}</td><td>${fmtK(totU26)}</td><td>${fmtEur(pm26)}</td><td>100,0%</td>
+          <td>${fmtM(totV25)}</td><td>${fmtK(totU25)}</td><td>${fmtEur(pm25)}</td><td>100,0%</td>
+          <td class="${delta(totV26,totV25)>=0?'pos':'neg'}">${fmtPct(delta(totV26,totV25))}</td>
+          <td class="${delta(totU26,totU25)>=0?'pos':'neg'}">${fmtPct(delta(totU26,totU25))}</td>
+          <td class="${delta(pm26,pm25)>=0?'pos':'neg'}">${fmtPct(delta(pm26,pm25))}</td>
+        </tr>
+        ${allRows.map(r=>{
+          const pm26r=r.units_26?r.value_26/r.units_26:0;
+          const pm25r=r.units_25p?r.value_25p/r.units_25p:0;
+          return `<tr>
+            <td class="l">${r.promozione}</td>
+            <td>${fmtM(r.value_26)}</td><td>${fmtK(r.units_26)}</td><td>${fmtEur(pm26r)}</td><td>${fmtPct2(r.qdm_value_26)}</td>
+            <td>${fmtM(r.value_25p)}</td><td>${fmtK(r.units_25p)}</td><td>${fmtEur(pm25r)}</td><td>${fmtPct2(r.qdm_value_25p)}</td>
+            <td class="${r.value_25p?delta(r.value_26,r.value_25p)>=0?'pos':'neg':''}">${r.value_25p?fmtPct(delta(r.value_26,r.value_25p)):'—'}</td>
+            <td class="${r.units_25p?delta(r.units_26,r.units_25p)>=0?'pos':'neg':''}">${r.units_25p?fmtPct(delta(r.units_26,r.units_25p)):'—'}</td>
+            <td class="${pm25r?delta(pm26r,pm25r)>=0?'pos':'neg':''}">${pm25r?fmtPct(delta(pm26r,pm25r)):'—'}</td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table></div>
   </div>`;
 }
 
-function buildPromoRows(agg, totV26, totU26, totV25, totU25) {
-  return Object.entries(agg)
-    .filter(([p]) => p !== 'ALTRO')
-    .sort((a,b) => b[1].v26 - a[1].v26)
-    .concat(agg['ALTRO'] ? [['ALTRO', agg['ALTRO']]] : [])
-    .map(([p, d]) => {
-      const qdmV26 = d.v26 / (totV26||1);
-      const qdmV25 = d.v25 / (totV25||1);
-      const dq = qdmV25 > 0 ? qdmV26/qdmV25-1 : 0;
-      const pm26 = d.v26/(d.u26||1);
-      return `<tr>
-        <td>${p}</td>
-        <td>${fmtM(d.v26)}</td>
-        <td>${fmtK(d.u26)}</td>
-        <td>${fmtPct2(qdmV26)}</td>
-        <td>${fmtPct2(qdmV25)}</td>
-        <td class="${dq>=0?'pos':'neg'}">${fmtPct(dq)}</td>
-        <td>${fmtEur(pm26)}</td>
-      </tr>`;
-    }).join('');
-}
+// ─── RENDER PARI PERIMETRO / QUADRATURA ──────────────────────
+function buildTabellone(isQuad) {
+  const rows = currentData.recap;
+  const v26f = r => r.value_26||0, u26f = r => r.units_26||0;
+  const v25f = r => isQuad ? (r.value_25q||0) : (r.value_25p||0);
+  const u25f = r => isQuad ? (r.units_25q||0) : (r.units_25p||0);
 
-// -------- PARI PERIMETRO / QUADRATURA --------
-function buildPariPerimetro() {
-  return buildTabellone('PARI PERIMETRO', parsedData.gfk2026.rows, parsedData.gfk2025.rows, false);
-}
-function buildQuadratura() {
-  return buildTabellone('QUADRATURA', parsedData.gfk2026.rows, parsedData.gfk2025.rows, true);
-}
+  const totV26=rows.reduce((s,r)=>s+v26f(r),0), totU26=rows.reduce((s,r)=>s+u26f(r),0);
+  const totV25=rows.reduce((s,r)=>s+v25f(r),0), totU25=rows.reduce((s,r)=>s+u25f(r),0);
+  const totPM26=totU26?totV26/totU26:0, totPM25=totU25?totV25/totU25:0;
 
-function buildTabellone(titolo, r26, r25, isQuadratura) {
-  // Aggrega per promozione
-  const agg = {};
-  function add(promo, v26, u26, v25, u25) {
-    if (!agg[promo]) agg[promo] = {v26:0,u26:0,v25:0,u25:0};
-    agg[promo].v26 += v26; agg[promo].u26 += u26;
-    agg[promo].v25 += v25; agg[promo].u25 += u25;
-  }
+  const sorted=[...rows].filter(r=>r.promozione!=='ALTRO').sort((a,b)=>v26f(b)-v26f(a));
+  const altro=rows.find(r=>r.promozione==='ALTRO');
+  const all=altro?[...sorted,altro]:sorted;
 
-  // Per pari perimetro: solo editori presenti in entrambi gli anni
-  const editori26 = new Set(r26.filter(r=>r['Publisher']&&r['Publisher']!=='Total').map(r=>r['Publisher']));
-  const editori25 = new Set(r25.filter(r=>r['Publisher']&&r['Publisher']!=='Total').map(r=>r['Publisher']));
-  const comuni = isQuadratura
-    ? editori26  // quadratura = tutti 2026
-    : new Set([...editori26].filter(e => editori25.has(e))); // pari = intersezione
+  const titolo = isQuad ? 'QUADRATURA' : 'PARI PERIMETRO';
+  const sub = isQuad ? 'Tutti gli editori 2026' : 'Editori comuni 2026/2025';
 
-  r26.filter(r=>r['Publisher']&&r['Publisher']!=='Total'&&comuni.has(r['Publisher'])).forEach(r => {
-    const promo = dbPromo[r['Publisher']] || 'ALTRO';
-    const v = parseFloat(r['Value'])||0, u = parseFloat(r['Units'])||0;
-    add(promo, v, u, 0, 0);
-  });
-  r25.filter(r=>r['Publisher']&&r['Publisher']!=='Total'&&comuni.has(r['Publisher'])).forEach(r => {
-    const promo = dbPromo[r['Publisher']] || 'ALTRO';
-    const v = parseFloat(r['Value'])||0, u = parseFloat(r['Units'])||0;
-    add(promo, 0, 0, v, u);
-  });
-
-  const totV26 = Object.values(agg).reduce((s,d)=>s+d.v26,0);
-  const totU26 = Object.values(agg).reduce((s,d)=>s+d.u26,0);
-  const totV25 = Object.values(agg).reduce((s,d)=>s+d.v25,0);
-  const totU25 = Object.values(agg).reduce((s,d)=>s+d.u25,0);
-  const totPM26 = totV26/(totU26||1);
-  const totPM25 = totV25/(totU25||1);
-
-  const sorted = Object.entries(agg)
-    .filter(([p]) => p !== 'ALTRO')
-    .sort((a,b) => b[1].v26 - a[1].v26)
-    .concat(agg['ALTRO'] ? [['ALTRO', agg['ALTRO']]] : []);
-
-  const rows = sorted.map(([p, d]) => {
-    const pm26 = d.v26/(d.u26||1), pm25 = d.v25/(d.u25||1);
-    const qdmV26 = d.v26/(totV26||1), qdmU26 = d.u26/(totU26||1);
-    const qdmV25 = d.v25/(totV25||1), qdmU25 = d.u25/(totU25||1);
-    const dv = d.v25>0?d.v26/d.v25-1:0;
-    const du = d.u25>0?d.u26/d.u25-1:0;
-    const dpm = pm25>0?pm26/pm25-1:0;
-    return `<tr>
-      <td>${p}</td>
-      <td>${fmtM(d.v26)}</td>
-      <td>${fmtK(d.u26)}</td>
-      <td>${fmtEur(pm26)}</td>
-      <td>${fmtPct2(qdmV26)}</td>
-      <td>${fmtPct2(qdmU26)}</td>
-      <td class="${dv>=0?'pos':'neg'}">${fmtPct(dv)}</td>
-      <td class="${du>=0?'pos':'neg'}">${fmtPct(du)}</td>
-      <td class="${dpm>=0?'pos':'neg'}">${fmtPct(dpm)}</td>
-      <td>${fmtM(d.v25)}</td>
-      <td>${fmtK(d.u25)}</td>
-      <td>${fmtEur(pm25)}</td>
-      <td>${fmtPct2(qdmV25)}</td>
-      <td>${fmtPct2(qdmU25)}</td>
-    </tr>`;
-  }).join('');
-
-  const dv = totV25>0?totV26/totV25-1:0;
-  const du = totU25>0?totU26/totU25-1:0;
-  const dpm = totPM25>0?totPM26/totPM25-1:0;
-
-  return `
-  <div class="big-table-wrap">
-    <div class="big-table-header">
-      <div class="big-table-title">${titolo} — Editori ${isQuadratura?'2026':'Comuni 2026/2025'}</div>
-      <div style="font-size:11px;color:var(--text3);">${weekLabel}</div>
+  return `<div class="blk">
+    <div class="blk-hdr">
+      <span class="blk-title">${titolo} — ${sub}</span>
+      <span style="font-size:11px;color:var(--text3)">${currentWeekKey?.replace('_',' ')}</span>
     </div>
-    <div class="big-table-scroll">
-      <table class="big-table">
-        <thead>
-          <tr>
-            <th rowspan="2" style="text-align:left;vertical-align:bottom;padding-bottom:10px;">Promozione</th>
-            <th colspan="5">2026</th>
-            <th colspan="3">2026 vs 2025</th>
-            <th colspan="5">2025</th>
-          </tr>
-          <tr>
-            <th>Value</th><th>Units</th><th>PM</th><th>QDM Val%</th><th>QDM Unit%</th>
-            <th>Δ Val%</th><th>Δ Unit%</th><th>Δ PM%</th>
-            <th>Value</th><th>Units</th><th>PM</th><th>QDM Val%</th><th>QDM Unit%</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr class="total-row">
-            <td>Totale complessivo</td>
-            <td>${fmtM(totV26)}</td><td>${fmtK(totU26)}</td><td>${fmtEur(totPM26)}</td>
-            <td>100,0%</td><td>100,0%</td>
-            <td class="${dv>=0?'pos':'neg'}">${fmtPct(dv)}</td>
-            <td class="${du>=0?'pos':'neg'}">${fmtPct(du)}</td>
-            <td class="${dpm>=0?'pos':'neg'}">${fmtPct(dpm)}</td>
-            <td>${fmtM(totV25)}</td><td>${fmtK(totU25)}</td><td>${fmtEur(totPM25)}</td>
-            <td>100,0%</td><td>100,0%</td>
-          </tr>
-          ${rows}
-        </tbody>
-      </table>
-    </div>
+    <div class="tbl-wrap"><table>
+      <thead>
+        <tr class="thead-group">
+          <th class="l" rowspan="2">Promozione</th>
+          <th colspan="5">2026</th>
+          <th colspan="3">Δ 2026 vs 2025</th>
+          <th colspan="5">2025</th>
+        </tr>
+        <tr>
+          <th class="r">Value</th><th class="r">Units</th><th class="r">PM</th><th class="r">QDM Val%</th><th class="r">QDM Unit%</th>
+          <th class="r">Δ Val%</th><th class="r">Δ Unit%</th><th class="r">Δ PM%</th>
+          <th class="r">Value</th><th class="r">Units</th><th class="r">PM</th><th class="r">QDM Val%</th><th class="r">QDM Unit%</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="tot">
+          <td class="l">Totale</td>
+          <td>${fmtM(totV26)}</td><td>${fmtK(totU26)}</td><td>${fmtEur(totPM26)}</td><td>100,0%</td><td>100,0%</td>
+          <td class="${delta(totV26,totV25)>=0?'pos':'neg'}">${fmtPct(delta(totV26,totV25))}</td>
+          <td class="${delta(totU26,totU25)>=0?'pos':'neg'}">${fmtPct(delta(totU26,totU25))}</td>
+          <td class="${delta(totPM26,totPM25)>=0?'pos':'neg'}">${fmtPct(delta(totPM26,totPM25))}</td>
+          <td>${fmtM(totV25)}</td><td>${fmtK(totU25)}</td><td>${fmtEur(totPM25)}</td><td>100,0%</td><td>100,0%</td>
+        </tr>
+        ${all.map(r=>{
+          const v26=v26f(r),u26=u26f(r),v25=v25f(r),u25=u25f(r);
+          const pm26=u26?v26/u26:0, pm25=u25?v25/u25:0;
+          const qv26=totV26?v26/totV26:0, qu26=totU26?u26/totU26:0;
+          const qv25=totV25?v25/totV25:0, qu25=totU25?u25/totU25:0;
+          return `<tr>
+            <td class="l">${r.promozione}</td>
+            <td>${fmtM(v26)}</td><td>${fmtK(u26)}</td><td>${fmtEur(pm26)}</td>
+            <td>${fmtPct2(qv26)}</td><td>${fmtPct2(qu26)}</td>
+            <td class="${v25?delta(v26,v25)>=0?'pos':'neg':''}">${v25?fmtPct(delta(v26,v25)):'—'}</td>
+            <td class="${u25?delta(u26,u25)>=0?'pos':'neg':''}">${u25?fmtPct(delta(u26,u25)):'—'}</td>
+            <td class="${pm25?delta(pm26,pm25)>=0?'pos':'neg':''}">${pm25?fmtPct(delta(pm26,pm25)):'—'}</td>
+            <td>${fmtM(v25)}</td><td>${fmtK(u25)}</td><td>${fmtEur(pm25)}</td>
+            <td>${fmtPct2(qv25)}</td><td>${fmtPct2(qu25)}</td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table></div>
   </div>`;
 }
 
-// -------- GENERI --------
+// ─── RENDER GENERI ───────────────────────────────────────────
 function buildGeneri() {
-  const pde = parsedData.generiPDE.rows;
-  const merc = parsedData.generiMercato.rows;
+  const pde = currentData.generi.filter(r=>r.tipo==='PDE');
+  const merc = currentData.generi.filter(r=>r.tipo==='MERCATO');
 
-  function buildGenreTable(rows, titolo) {
-    const total = rows.find(r => String(r['ID']).toLowerCase()==='total' || String(r['Genre']).toLowerCase()==='total') || rows[0] || {};
-    const dataRows = rows.filter(r => String(r['ID']).toLowerCase()!=='total' && r['Genre']);
-    const totV26 = parseFloat(total['Value']) || 1;
-
-    return `
-    <div class="big-table-wrap">
-      <div class="big-table-header">
-        <div class="big-table-title">${titolo}</div>
-        <div style="font-size:11px;color:var(--text3);">${weekLabel}</div>
-      </div>
-      <div class="big-table-scroll">
-        <table class="big-table" style="min-width:700px;">
-          <thead>
-            <tr>
-              <th style="text-align:left;">Genere</th>
-              <th colspan="4">2026</th>
-              <th colspan="4">2025</th>
-              <th colspan="2">Δ 2026 vs 2025</th>
-            </tr>
-            <tr>
-              <th style="text-align:left;"></th>
-              <th>Value</th><th>Val%</th><th>Units</th><th>PM</th>
-              <th>Value</th><th>Val%</th><th>Units</th><th>PM</th>
-              <th>Δ Val%</th><th>Δ Unit%</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${dataRows.map(r => {
-              const v26 = parseFloat(r['Value'])||0;
-              const u26 = parseFloat(r['Units'])||0;
-              const vp26 = parseFloat(r['Value %'])||0;
-              const pm26 = parseFloat(r['Ø-Price'])||0;
-              // cerca colonne 2025 (hanno suffisso diverso - col 7-11)
-              const keys = Object.keys(r);
-              // struttura: ID, Genre, Value(26), Value%(26), Units(26), Units%(26), PM(26), Value(25), Value%(25), Units(25), Units%(25), PM(25), ...diff
-              const v25 = parseFloat(r[keys[7]])||0;
-              const vp25 = parseFloat(r[keys[8]])||0;
-              const u25 = parseFloat(r[keys[9]])||0;
-              const pm25 = parseFloat(r[keys[11]])||0;
-              const dv = parseFloat(r[keys[13]])||0;
-              const du = parseFloat(r[keys[15]])||0;
-              return `<tr>
-                <td>${r['Genre']||''}</td>
-                <td>${fmtM(v26)}</td>
-                <td>${fmtPct2(vp26)}</td>
-                <td>${fmtK(u26)}</td>
-                <td>${fmtEur(pm26)}</td>
-                <td>${fmtM(v25)}</td>
-                <td>${fmtPct2(vp25)}</td>
-                <td>${fmtK(u25)}</td>
-                <td>${fmtEur(pm25)}</td>
-                <td class="${dv>=0?'pos':'neg'}">${fmtPct(dv)}</td>
-                <td class="${du>=0?'pos':'neg'}">${fmtPct(du)}</td>
-              </tr>`;
-            }).join('')}
-          </tbody>
-        </table>
-      </div>
+  function genTable(rows, titolo) {
+    return `<div class="blk">
+      <div class="blk-hdr"><span class="blk-title">${titolo}</span></div>
+      <div class="tbl-wrap"><table>
+        <thead>
+          <tr class="thead-group">
+            <th class="l" rowspan="2">Genere</th>
+            <th colspan="4">2026</th>
+            <th colspan="4">2025</th>
+            <th colspan="2">Δ</th>
+          </tr>
+          <tr>
+            <th class="r">Value</th><th class="r">Val%</th><th class="r">Units</th><th class="r">PM</th>
+            <th class="r">Value</th><th class="r">Val%</th><th class="r">Units</th><th class="r">PM</th>
+            <th class="r">Δ Val%</th><th class="r">Δ Unit%</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map(r=>`<tr>
+            <td class="l">${r.genre}</td>
+            <td>${fmtM(r.value_26)}</td><td>${fmtPct2(r.value_pct_26)}</td>
+            <td>${fmtK(r.units_26)}</td><td>${fmtEur(r.pm_26)}</td>
+            <td>${fmtM(r.value_25)}</td><td>${fmtPct2(r.value_pct_25)}</td>
+            <td>${fmtK(r.units_25)}</td><td>${fmtEur(r.pm_25)}</td>
+            <td class="${(r.delta_value||0)>=0?'pos':'neg'}">${fmtPct(r.delta_value)}</td>
+            <td class="${(r.delta_units||0)>=0?'pos':'neg'}">${fmtPct(r.delta_units)}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table></div>
     </div>`;
   }
 
-  return `
-  <div class="generi-grid">
-    ${buildGenreTable(pde, 'GENERI PDE')}
-    ${buildGenreTable(merc, 'GENERI MERCATO')}
+  return `<div class="two-col">
+    ${genTable(pde,'GENERI PDE')}
+    ${genTable(merc,'GENERI MERCATO')}
   </div>`;
 }
 
-// ============================================================
-// FORMATTERS
-// ============================================================
+// ─── RENDER TOP 20 ───────────────────────────────────────────
+function buildTop20() {
+  const week = currentData.top20.filter(r=>r.tipo==='WEEK').sort((a,b)=>a.rank_pos-b.rank_pos);
+  const tot = currentData.top20.filter(r=>r.tipo==='TOTALE').sort((a,b)=>a.rank_pos-b.rank_pos);
+
+  function rankBadge(n) {
+    if(n===1) return `<span class="rank-badge gold">#1</span>`;
+    if(n===2) return `<span class="rank-badge silver">#2</span>`;
+    if(n===3) return `<span class="rank-badge bronze">#3</span>`;
+    return `<span class="rank-badge">#${n}</span>`;
+  }
+
+  function top20Table(rows, titolo) {
+    return `<div class="blk" style="margin-bottom:20px">
+      <div class="blk-hdr"><span class="blk-title">${titolo}</span></div>
+      <div class="tbl-wrap"><table>
+        <thead><tr>
+          <th class="r">#</th>
+          <th class="l">Titolo</th>
+          <th class="l">Autore</th>
+          <th class="l">Editore</th>
+          <th class="l">Promozione</th>
+          <th class="l">Genere</th>
+          <th class="r">Value</th>
+          <th class="r">Val%</th>
+          <th class="r">Units</th>
+          <th class="r">PM</th>
+        </tr></thead>
+        <tbody>
+          ${rows.map(r=>`<tr>
+            <td>${rankBadge(r.rank_pos)}</td>
+            <td class="l" style="max-width:200px;white-space:normal;line-height:1.3">${r.title||'—'}</td>
+            <td class="l">${r.author||'—'}</td>
+            <td class="l">${r.publisher||'—'}</td>
+            <td class="l dim">${r.promozione||'—'}</td>
+            <td class="l dim">${r.genre||'—'}</td>
+            <td>${fmtM(r.value)}</td>
+            <td>${fmtPct2(r.value_pct)}</td>
+            <td>${fmtK(r.units)}</td>
+            <td>${fmtEur(r.pm)}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table></div>
+    </div>`;
+  }
+
+  return top20Table(week,'TOP 20 — SETTIMANA CORRENTE') + top20Table(tot,'TOP 20 — PROGRESSIVO');
+}
+
+// ─── PROGRESS ────────────────────────────────────────────────
+function setProgress(pct, label) {
+  const w = document.getElementById('progressWrap');
+  w.style.display = 'block';
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressLabel').textContent = label;
+}
+function hideProgress() {
+  document.getElementById('progressWrap').style.display = 'none';
+}
+
+// ─── UTILS ───────────────────────────────────────────────────
+const delta = (a,b) => b ? a/b-1 : 0;
 const fmtM = v => {
-  if (!v && v !== 0) return '—';
-  if (Math.abs(v) >= 1e6) return (v/1e6).toLocaleString('it-IT',{minimumFractionDigits:1,maximumFractionDigits:1}) + 'M';
-  if (Math.abs(v) >= 1e3) return (v/1e3).toLocaleString('it-IT',{minimumFractionDigits:0,maximumFractionDigits:0}) + 'K';
-  return v.toLocaleString('it-IT',{minimumFractionDigits:0,maximumFractionDigits:0});
-};
-const fmtK = v => {
-  if (!v && v !== 0) return '—';
-  if (Math.abs(v) >= 1e6) return (v/1e6).toLocaleString('it-IT',{minimumFractionDigits:2,maximumFractionDigits:2}) + 'M';
-  if (Math.abs(v) >= 1e3) return (v/1e3).toLocaleString('it-IT',{minimumFractionDigits:1,maximumFractionDigits:1}) + 'K';
+  if(!v&&v!==0) return '—';
+  if(Math.abs(v)>=1e6) return (v/1e6).toLocaleString('it-IT',{minimumFractionDigits:1,maximumFractionDigits:1})+'M';
+  if(Math.abs(v)>=1e3) return (v/1e3).toLocaleString('it-IT',{minimumFractionDigits:0,maximumFractionDigits:0})+'K';
   return v.toLocaleString('it-IT');
 };
-const fmtEur = v => v ? '€' + v.toLocaleString('it-IT',{minimumFractionDigits:2,maximumFractionDigits:2}) : '—';
-const fmtPct = v => {
-  if (v == null || isNaN(v)) return '—';
-  const s = (v*100).toLocaleString('it-IT',{minimumFractionDigits:1,maximumFractionDigits:1});
-  return (v >= 0 ? '+' : '') + s + '%';
+const fmtK = v => {
+  if(!v&&v!==0) return '—';
+  if(Math.abs(v)>=1e6) return (v/1e6).toLocaleString('it-IT',{minimumFractionDigits:2,maximumFractionDigits:2})+'M';
+  if(Math.abs(v)>=1e3) return (v/1e3).toLocaleString('it-IT',{minimumFractionDigits:1,maximumFractionDigits:1})+'K';
+  return v.toLocaleString('it-IT');
 };
-const fmtPct2 = v => {
-  if (v == null || isNaN(v)) return '—';
-  return (v*100).toLocaleString('it-IT',{minimumFractionDigits:1,maximumFractionDigits:1}) + '%';
-};
+const fmtEur = v => v ? '€'+v.toLocaleString('it-IT',{minimumFractionDigits:2,maximumFractionDigits:2}) : '—';
+const fmtPct = v => { if(v==null||isNaN(v)) return '—'; const s=(v*100).toLocaleString('it-IT',{minimumFractionDigits:1,maximumFractionDigits:1}); return (v>=0?'+':'')+s+'%'; };
+const fmtPct2 = v => { if(v==null||isNaN(v)) return '—'; return (v*100).toLocaleString('it-IT',{minimumFractionDigits:1,maximumFractionDigits:1})+'%'; };
 
-// ============================================================
-// TOAST
-// ============================================================
-function showToast(msg, type='success') {
+function toast(msg, type='ok') {
   const t = document.createElement('div');
   t.className = `toast ${type}`;
   t.textContent = msg;
-  document.getElementById('toastContainer').appendChild(t);
-  setTimeout(() => t.remove(), 3500);
+  document.getElementById('toasts').appendChild(t);
+  setTimeout(()=>t.remove(), 3500);
 }
+
+// ─── INIT ────────────────────────────────────────────────────
+(async () => {
+  await loadWeekList();
+  // Se c'è già una settimana in lista, mostra la più recente
+  const sel = document.getElementById('weekSelect');
+  if (sel.options.length > 1) {
+    sel.selectedIndex = 1;
+    await loadWeek(sel.value);
+  }
+})();
 </script>
 </body>
 </html>
