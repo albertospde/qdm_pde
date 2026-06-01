@@ -305,30 +305,31 @@ async function handleFiles(fileList) {
 function parseGFK(buf) {
   const wb = XLSX.read(buf, {type:'array'});
   const ws = wb.Sheets[wb.SheetNames[0]];
+  const raw = XLSX.utils.sheet_to_json(ws, {header:1, defval:null, raw:false});
+  // raw:false → tutte le celle come stringhe, evita problemi di tipo
 
-  // Leggi meta direttamente dalle celle (più affidabile di sheet_to_json)
-  // Struttura fissa: col A = chiave, col B = valore, righe 1-15 (0-indexed: 0-14)
+  // Scansiona le prime 20 righe cercando coppie chiave/valore
+  // NON usa indici fissi — cerca la chiave per nome
   const meta = {};
-  const getCellVal = (col, row) => {
-    const addr = XLSX.utils.encode_cell({c: col, r: row});
-    const cell = ws[addr];
-    return cell ? String(cell.v).trim() : null;
-  };
-  for (let r = 0; r < 16; r++) {
-    const k = getCellVal(0, r);
-    const v = getCellVal(1, r);
-    if (k && v && k !== 'Criteria:') meta[k] = v;
+  for (let i = 0; i < 20; i++) {
+    const r = raw[i];
+    if (!r) continue;
+    // Trova la prima cella non-null della riga
+    const nonNull = r.filter(v => v != null && String(v).trim() !== '');
+    if (nonNull.length >= 2) {
+      const k = String(nonNull[0]).trim();
+      const v = String(nonNull[1]).trim();
+      if (k && v && k !== 'Criteria:') meta[k] = v;
+    }
   }
 
-  // Leggi raw per trovare header e dati
-  const raw = XLSX.utils.sheet_to_json(ws, {header:1, defval:null});
-
-  // Trova header dinamicamente: prima riga con >=3 celle che inizia con 'Rank' o 'ID'
+  // Trova la riga header: prima riga con >=3 celle non-null
+  // che inizia esattamente con 'Rank' o 'ID'
   let headerRowIdx = -1;
   for (let i = 10; i < 22; i++) {
     const r = raw[i] || [];
-    const nonNull = r.filter(v => v != null);
-    const first = nonNull[0] != null ? String(nonNull[0]).trim() : '';
+    const nonNull = r.filter(v => v != null && String(v).trim() !== '');
+    const first = nonNull.length > 0 ? String(nonNull[0]).trim() : '';
     if (nonNull.length >= 3 && (first === 'Rank' || first === 'ID')) {
       headerRowIdx = i;
       break;
@@ -336,17 +337,17 @@ function parseGFK(buf) {
   }
   if (headerRowIdx === -1) headerRowIdx = 16;
 
-  const firstHeader = (raw[headerRowIdx] || [])[0];
-  const isGeneri = firstHeader != null && String(firstHeader).trim() === 'ID';
+  const firstHeader = String((raw[headerRowIdx] || [])[0] || '').trim();
+  const isGeneri = firstHeader === 'ID';
 
   const headers = (raw[headerRowIdx] || []).map((h,i) =>
-    h != null ? String(h).trim() : `_c${i}`
+    h != null && String(h).trim() !== '' ? String(h).trim() : `_c${i}`
   );
 
   const rows = [];
   for (let i = headerRowIdx + 1; i < raw.length; i++) {
     const r = raw[i];
-    if (!r || r.every(v => v == null)) continue;
+    if (!r || r.every(v => v == null || String(v).trim() === '')) continue;
     const obj = {};
     headers.forEach((h,j) => { obj[h] = r[j] ?? null; });
     rows.push(obj);
