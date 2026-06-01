@@ -1,0 +1,1314 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QDM PDE — Quote di Mercato</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
+
+  :root {
+    --bg: #0f1117;
+    --surface: #181c25;
+    --surface2: #1e2330;
+    --border: #2a3045;
+    --accent: #00b4e8;
+    --accent2: #1a2d6b;
+    --green: #22c55e;
+    --red: #ef4444;
+    --yellow: #f59e0b;
+    --text: #e2e8f0;
+    --text2: #94a3b8;
+    --text3: #64748b;
+    --mono: 'IBM Plex Mono', monospace;
+    --sans: 'IBM Plex Sans', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 14px;
+    min-height: 100vh;
+  }
+
+  /* HEADER */
+  .header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 24px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    height: 56px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .header-logo {
+    background: #fff;
+    border-radius: 6px;
+    padding: 4px 8px;
+    font-family: var(--mono);
+    font-weight: 600;
+    font-size: 12px;
+    color: var(--accent2);
+    letter-spacing: 1px;
+  }
+  .header-title {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text2);
+    letter-spacing: 0.5px;
+  }
+  .header-week {
+    margin-left: auto;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent);
+    background: rgba(0,180,232,0.1);
+    border: 1px solid rgba(0,180,232,0.2);
+    border-radius: 4px;
+    padding: 3px 8px;
+  }
+
+  /* UPLOAD ZONE */
+  .upload-section {
+    padding: 24px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+  .upload-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 10px;
+    margin-top: 12px;
+  }
+  .upload-card {
+    background: var(--surface2);
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+    padding: 12px 10px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.15s;
+    position: relative;
+  }
+  .upload-card:hover { border-color: var(--accent); background: rgba(0,180,232,0.04); }
+  .upload-card.loaded { border-style: solid; border-color: var(--green); background: rgba(34,197,94,0.05); }
+  .upload-card input[type=file] {
+    position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%;
+  }
+  .upload-card-label {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-bottom: 4px;
+  }
+  .upload-card-name {
+    font-size: 11px;
+    color: var(--text2);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .upload-card-icon { font-size: 20px; margin-bottom: 4px; }
+  .upload-card.loaded .upload-card-icon::after { content: ' ✓'; color: var(--green); font-size: 14px; }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 18px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 500;
+    transition: all 0.15s;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: #000;
+  }
+  .btn-primary:hover { background: #00c8ff; }
+  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-ghost {
+    background: var(--surface2);
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+
+  .upload-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 14px;
+  }
+  .upload-status {
+    font-size: 12px;
+    color: var(--text3);
+  }
+
+  /* TABS */
+  .tabs {
+    display: flex;
+    gap: 0;
+    padding: 0 24px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+  .tab {
+    padding: 14px 20px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    color: var(--text3);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.15s;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  /* MAIN CONTENT */
+  .main { padding: 24px; }
+
+  /* EMPTY STATE */
+  .empty-state {
+    text-align: center;
+    padding: 80px 20px;
+    color: var(--text3);
+  }
+  .empty-state h2 { font-size: 20px; color: var(--text2); margin-bottom: 8px; }
+  .empty-state p { font-size: 13px; }
+
+  /* RECAP TAB */
+  .recap-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 24px;
+  }
+  .recap-block {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .recap-block-header {
+    padding: 12px 16px;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .recap-block-title {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text2);
+  }
+  .recap-block-badge {
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    background: rgba(0,180,232,0.1);
+    color: var(--accent);
+  }
+  .recap-metrics {
+    padding: 16px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+  .metric {
+    background: var(--surface2);
+    border-radius: 8px;
+    padding: 12px;
+    border: 1px solid var(--border);
+  }
+  .metric-label {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--text3);
+    margin-bottom: 6px;
+  }
+  .metric-value {
+    font-family: var(--mono);
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .metric-delta {
+    font-family: var(--mono);
+    font-size: 11px;
+    margin-top: 3px;
+  }
+  .metric-delta.pos { color: var(--green); }
+  .metric-delta.neg { color: var(--red); }
+  .metric-sub {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text3);
+    margin-top: 2px;
+  }
+
+  /* PREZZI MEDI TABLE */
+  .promo-table-wrap {
+    padding: 0 16px 16px;
+    overflow-x: auto;
+  }
+  .promo-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+  .promo-table th {
+    text-align: right;
+    padding: 6px 10px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.7px;
+    color: var(--text3);
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  .promo-table th:first-child { text-align: left; }
+  .promo-table td {
+    padding: 7px 10px;
+    border-bottom: 1px solid rgba(42,48,69,0.5);
+    text-align: right;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text2);
+  }
+  .promo-table td:first-child {
+    text-align: left;
+    font-family: var(--sans);
+    font-weight: 500;
+    color: var(--text);
+    font-size: 12px;
+  }
+  .promo-table tr:last-child td { border-bottom: none; }
+  .promo-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+  /* PARI PERIMETRO / QUADRATURA TABLE */
+  .big-table-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .big-table-header {
+    padding: 14px 20px;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .big-table-title {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--text2);
+  }
+  .big-table-scroll { overflow-x: auto; }
+  .big-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    min-width: 900px;
+  }
+  .big-table thead tr:first-child th {
+    background: rgba(0,180,232,0.07);
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.7px;
+    color: var(--accent);
+    padding: 8px 12px;
+    text-align: center;
+    border-bottom: 1px solid var(--border);
+  }
+  .big-table thead tr:first-child th:first-child { text-align: left; color: var(--text3); }
+  .big-table thead tr:nth-child(2) th {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: var(--text3);
+    padding: 6px 12px;
+    text-align: right;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface2);
+  }
+  .big-table thead tr:nth-child(2) th:first-child { text-align: left; }
+  .big-table tbody td {
+    padding: 8px 12px;
+    border-bottom: 1px solid rgba(42,48,69,0.4);
+    text-align: right;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text2);
+    white-space: nowrap;
+  }
+  .big-table tbody td:first-child {
+    text-align: left;
+    font-family: var(--sans);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text);
+    min-width: 220px;
+  }
+  .big-table tbody tr:hover td { background: rgba(255,255,255,0.02); }
+  .big-table tbody tr.total-row td {
+    background: rgba(0,180,232,0.06);
+    font-weight: 600;
+    color: var(--text);
+    border-top: 1px solid var(--border);
+  }
+  .big-table tbody tr.group-row td {
+    background: rgba(255,255,255,0.02);
+    color: var(--text3);
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    padding: 5px 12px;
+  }
+  .big-table tbody tr.group-row td:first-child { color: var(--accent); }
+
+  .pos { color: var(--green) !important; }
+  .neg { color: var(--red) !important; }
+  .neu { color: var(--text3) !important; }
+
+  /* GENERI */
+  .generi-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+
+  /* MODAL MAPPATURA */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.75);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(4px);
+  }
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    width: 680px;
+    max-width: 95vw;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .modal-header {
+    padding: 18px 20px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface2);
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .modal-header-icon { font-size: 20px; }
+  .modal-header-text h3 { font-size: 15px; font-weight: 600; }
+  .modal-header-text p { font-size: 12px; color: var(--text3); margin-top: 3px; }
+  .modal-body { padding: 16px 20px; overflow-y: auto; flex: 1; }
+  .modal-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(42,48,69,0.5);
+  }
+  .modal-row:last-child { border-bottom: none; }
+  .modal-row-name {
+    flex: 1;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text);
+  }
+  .modal-row-name span {
+    display: block;
+    font-size: 10px;
+    color: var(--text3);
+    margin-top: 2px;
+    font-family: var(--mono);
+  }
+  .modal-select {
+    width: 240px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 7px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-family: var(--sans);
+    cursor: pointer;
+    outline: none;
+  }
+  .modal-select:focus { border-color: var(--accent); }
+  .modal-footer {
+    padding: 14px 20px;
+    border-top: 1px solid var(--border);
+    background: var(--surface2);
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+  }
+
+  /* TOAST */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    z-index: 2000;
+    animation: slideIn 0.2s ease;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  }
+  .toast.success { border-color: var(--green); }
+  .toast.error { border-color: var(--red); }
+  @keyframes slideIn { from { opacity:0; transform: translateY(8px); } to { opacity:1; transform: translateY(0); } }
+
+  .spinner {
+    display: inline-block;
+    width: 14px; height: 14px;
+    border: 2px solid rgba(0,180,232,0.3);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .section-label {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text3);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-logo">PDE</div>
+  <div class="header-title">QDM — Quote di Mercato GFK</div>
+  <div class="header-week" id="headerWeek">Nessun dato caricato</div>
+</div>
+
+<!-- UPLOAD SECTION -->
+<div class="upload-section">
+  <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
+    <div class="section-label" style="margin-bottom:0; flex:1;">Carica i 6 file GFK</div>
+  </div>
+  <div class="upload-grid">
+    <div class="upload-card" id="card-gfk26">
+      <input type="file" accept=".xlsx,.xls" onchange="handleFile(event,'gfk2026')">
+      <div class="upload-card-icon">📊</div>
+      <div class="upload-card-label">DATI GFK 2026</div>
+      <div class="upload-card-name" id="name-gfk2026">Clicca per caricare</div>
+    </div>
+    <div class="upload-card" id="card-gfk25">
+      <input type="file" accept=".xlsx,.xls" onchange="handleFile(event,'gfk2025')">
+      <div class="upload-card-icon">📊</div>
+      <div class="upload-card-label">DATI GFK 2025</div>
+      <div class="upload-card-name" id="name-gfk2025">Clicca per caricare</div>
+    </div>
+    <div class="upload-card" id="card-top20w">
+      <input type="file" accept=".xlsx,.xls" onchange="handleFile(event,'top20week')">
+      <div class="upload-card-icon">📋</div>
+      <div class="upload-card-label">TOP 20 WEEK</div>
+      <div class="upload-card-name" id="name-top20week">Clicca per caricare</div>
+    </div>
+    <div class="upload-card" id="card-top20t">
+      <input type="file" accept=".xlsx,.xls" onchange="handleFile(event,'top20tot')">
+      <div class="upload-card-icon">📋</div>
+      <div class="upload-card-label">TOP 20 TOTALE</div>
+      <div class="upload-card-name" id="name-top20tot">Clicca per caricare</div>
+    </div>
+    <div class="upload-card" id="card-genpde">
+      <input type="file" accept=".xlsx,.xls" onchange="handleFile(event,'generiPDE')">
+      <div class="upload-card-icon">🏷️</div>
+      <div class="upload-card-label">GENERI PDE</div>
+      <div class="upload-card-name" id="name-generiPDE">Clicca per caricare</div>
+    </div>
+    <div class="upload-card" id="card-genmerc">
+      <input type="file" accept=".xlsx,.xls" onchange="handleFile(event,'generiMercato')">
+      <div class="upload-card-icon">🏷️</div>
+      <div class="upload-card-label">GENERI MERCATO</div>
+      <div class="upload-card-name" id="name-generiMercato">Clicca per caricare</div>
+    </div>
+  </div>
+  <div class="upload-actions">
+    <button class="btn btn-primary" id="btnElabora" onclick="elabora()" disabled>
+      <span>Elabora</span>
+    </button>
+    <button class="btn btn-ghost" onclick="resetAll()">Reset</button>
+    <span class="upload-status" id="uploadStatus">Carica tutti e 6 i file per procedere</span>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="tabs" id="tabsBar" style="display:none">
+  <div class="tab active" onclick="showTab('recap')">1 — Recap Mercato</div>
+  <div class="tab" onclick="showTab('pari')">2 — Pari Perimetro</div>
+  <div class="tab" onclick="showTab('quadratura')">3 — Quadratura</div>
+  <div class="tab" onclick="showTab('generi')">4 — Generi</div>
+</div>
+
+<!-- MAIN -->
+<div class="main" id="mainContent">
+  <div class="empty-state">
+    <div style="font-size:48px; margin-bottom:16px;">📈</div>
+    <h2>Nessun dato caricato</h2>
+    <p>Carica i 6 file GFK e clicca Elabora per visualizzare il dashboard</p>
+  </div>
+</div>
+
+<!-- MODAL MAPPATURA -->
+<div class="modal-overlay" id="mappingModal" style="display:none">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-header-icon">⚠️</div>
+      <div class="modal-header-text">
+        <h3>Editori non mappati</h3>
+        <p>Questi editori non sono presenti nel DB promozioni. Assegna una promozione per ciascuno.</p>
+      </div>
+    </div>
+    <div class="modal-body" id="mappingList"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="skipMapping()">Salta (usa ALTRO)</button>
+      <button class="btn btn-primary" onclick="saveMapping()">
+        <span class="spinner" id="mappingSpinner" style="display:none"></span>
+        Salva e continua
+      </button>
+    </div>
+  </div>
+</div>
+
+<div id="toastContainer"></div>
+
+<script>
+// ============================================================
+// SUPABASE
+// ============================================================
+const SUPA_URL = 'https://tdflwenlylhctxssatax.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRkZmx3ZW5seWxoY3R4c3NhdGF4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYzMzgyNzYsImV4cCI6MjA5MTkxNDI3Nn0.l35qEL7LOvyYuI1McQlVqj4vbyTqmlevcmqWbTGYi2Q';
+const supabase = window.supabase.createClient(SUPA_URL, SUPA_KEY);
+
+// ============================================================
+// PROMOZIONI LISTA
+// ============================================================
+const PROMOZIONI = [
+  'ALTRO','AMAZON','BIBLIOMANIE PROMOBIGS','CORRAINI','DIFFUSIONE SAN PAOLO',
+  'DISTRIBOOK','EDISES SRL','EDIZ. MEDICO SCIENTIFICHE','EMME PROMOZIONE',
+  'FELTRINELLI','FRANCO ANGELI','GIAPPICHELLI','GIUFFRE','GIUNTI','GRIBAUDI',
+  "L'IPPOCAMPO",'LATERZA','LISCIANI','LOESCHER','LOGOS',
+  'LYR S.R.L. / ALI+LIBROMANIA','MACRO GRUPPO EDITORIALE SRL','MAGGIOLI',
+  'MCGRAW-HILL','MONDADORI','MURSIA','NEWMEDI SRL','NW CONSULENZA MARKETING EDIT.',
+  'PDE SERVICE','PDE SERVIZI COMM. PER EDITORIA','PEA ITALIA','PEARSON ITALIA SPA',
+  'PROLIBRO','PROMEDI','PROMEDIA ITALIA SERVICE','PROMOCOMIX','RAFFAELLO',
+  'SIMONE','TASCHEN','ZANICHELLI'
+];
+
+// Gruppi promozione → etichetta
+const GRUPPI = {
+  'GRANDI GRUPPI': ['MONDADORI','PROLIBRO','GIUNTI','FELTRINELLI'],
+  'PDE + PDE SERVICE': ['PDE SERVIZI COMM. PER EDITORIA','PDE SERVICE'],
+  'PROMEDI + NW': ['PROMEDI','NW CONSULENZA MARKETING EDIT.'],
+  'EMMEPROMO + PROMOCOMIX': ['EMME PROMOZIONE','PROMOCOMIX'],
+  'LYR S.R.L. / ALI+LIBROMANIA': ['LYR S.R.L. / ALI+LIBROMANIA'],
+  'PEA': ['PEA ITALIA'],
+};
+
+function getGruppo(promo) {
+  for (const [g, promos] of Object.entries(GRUPPI)) {
+    if (promos.includes(promo)) return g;
+  }
+  return 'ALTRO';
+}
+
+// ============================================================
+// STATE
+// ============================================================
+const files = {};
+const parsedData = {};
+let dbPromo = {}; // editore → promo_2026
+let unmappedEditors = [];
+let pendingMappings = {};
+let weekLabel = '';
+
+// ============================================================
+// FILE HANDLING
+// ============================================================
+function handleFile(e, key) {
+  const file = e.target.files[0];
+  if (!file) return;
+  files[key] = file;
+  document.getElementById('name-' + key).textContent = file.name;
+  document.getElementById('card-' + keyToCard(key)).classList.add('loaded');
+  checkAllLoaded();
+}
+
+function keyToCard(key) {
+  return {
+    gfk2026:'gfk26', gfk2025:'gfk25',
+    top20week:'top20w', top20tot:'top20t',
+    generiPDE:'genpde', generiMercato:'genmerc'
+  }[key];
+}
+
+function checkAllLoaded() {
+  const keys = ['gfk2026','gfk2025','top20week','top20tot','generiPDE','generiMercato'];
+  const loaded = keys.every(k => files[k]);
+  document.getElementById('btnElabora').disabled = !loaded;
+  document.getElementById('uploadStatus').textContent = loaded
+    ? 'Tutti i file caricati. Pronto per elaborare.'
+    : `${keys.filter(k=>files[k]).length}/6 file caricati`;
+}
+
+function resetAll() {
+  Object.keys(files).forEach(k => delete files[k]);
+  Object.keys(parsedData).forEach(k => delete parsedData[k]);
+  ['gfk2026','gfk2025','top20week','top20tot','generiPDE','generiMercato'].forEach(k => {
+    document.getElementById('name-'+k).textContent = 'Clicca per caricare';
+    document.getElementById('card-'+keyToCard(k)).classList.remove('loaded');
+  });
+  document.getElementById('btnElabora').disabled = true;
+  document.getElementById('tabsBar').style.display = 'none';
+  document.getElementById('mainContent').innerHTML = `
+    <div class="empty-state">
+      <div style="font-size:48px;margin-bottom:16px;">📈</div>
+      <h2>Nessun dato caricato</h2>
+      <p>Carica i 6 file GFK e clicca Elabora per visualizzare il dashboard</p>
+    </div>`;
+  document.getElementById('headerWeek').textContent = 'Nessun dato caricato';
+  checkAllLoaded();
+}
+
+// ============================================================
+// PARSER GFK (struttura uniforme: 16 righe metadati, header R16, dati da R17)
+// ============================================================
+function parseGFK(arrayBuffer) {
+  const wb = XLSX.read(arrayBuffer, {type:'array'});
+  const ws = wb.Sheets[wb.SheetNames[0]];
+  const raw = XLSX.utils.sheet_to_json(ws, {header:1, defval:null});
+
+  // Leggi metadati
+  const meta = {};
+  for (let i = 0; i < 16; i++) {
+    const row = raw[i];
+    if (row && row[0] && row[1]) meta[String(row[0]).trim()] = String(row[1]).trim();
+    if (row && row[0] === 'Period') meta.period = String(row[1]).trim();
+    if (row && row[0] === 'Compare period') meta.comparePeriod = String(row[1]).trim();
+  }
+
+  // Header a riga 16 (indice 16), dati da 17
+  const headers = (raw[16] || []).map((h,i) => h != null ? String(h).trim() : `col${i}`);
+  const rows = [];
+  for (let i = 17; i < raw.length; i++) {
+    const r = raw[i];
+    if (!r || r.every(v => v == null)) continue;
+    const obj = {};
+    headers.forEach((h, j) => { obj[h] = r[j] ?? null; });
+    rows.push(obj);
+  }
+  return { meta, headers, rows };
+}
+
+// ============================================================
+// ELABORA
+// ============================================================
+async function elabora() {
+  document.getElementById('btnElabora').disabled = true;
+  document.getElementById('uploadStatus').textContent = 'Parsing file in corso...';
+
+  try {
+    // Carica DB promozioni da Supabase
+    await loadDBPromo();
+
+    // Parsa tutti i file
+    for (const [key, file] of Object.entries(files)) {
+      const buf = await file.arrayBuffer();
+      parsedData[key] = parseGFK(buf);
+    }
+
+    // Determina settimana dal file GFK 2026
+    const period = parsedData.gfk2026?.meta?.period || '';
+    weekLabel = period;
+    document.getElementById('headerWeek').textContent = period || 'Settimana corrente';
+
+    // Trova editori non mappati (solo nel file GFK 2026 publisher)
+    const editori26 = parsedData.gfk2026.rows
+      .map(r => r['Publisher'])
+      .filter(Boolean)
+      .filter(e => e !== 'Total');
+
+    unmappedEditors = editori26.filter(e => !dbPromo[e] && e !== 'Total');
+    // Rimuovi duplicati
+    unmappedEditors = [...new Set(unmappedEditors)];
+
+    if (unmappedEditors.length > 0) {
+      showMappingModal();
+    } else {
+      renderDashboard();
+    }
+
+  } catch(err) {
+    console.error(err);
+    showToast('Errore durante l\'elaborazione: ' + err.message, 'error');
+    document.getElementById('btnElabora').disabled = false;
+    document.getElementById('uploadStatus').textContent = 'Errore. Riprova.';
+  }
+}
+
+async function loadDBPromo() {
+  dbPromo = {};
+  let from = 0;
+  const pageSize = 1000;
+  while (true) {
+    const { data, error } = await supabase
+      .from('editore_promozione')
+      .select('editore_gfk, promo_2026')
+      .range(from, from + pageSize - 1);
+    if (error) throw error;
+    if (!data || data.length === 0) break;
+    data.forEach(r => { dbPromo[r.editore_gfk] = r.promo_2026; });
+    if (data.length < pageSize) break;
+    from += pageSize;
+  }
+}
+
+// ============================================================
+// MAPPING MODAL
+// ============================================================
+function showMappingModal() {
+  pendingMappings = {};
+  const list = document.getElementById('mappingList');
+  list.innerHTML = unmappedEditors.map(e => `
+    <div class="modal-row">
+      <div class="modal-row-name">
+        ${e}
+        <span>Non trovato nel DB promozioni</span>
+      </div>
+      <select class="modal-select" id="sel_${CSS.escape(e)}" data-editor="${e}">
+        ${PROMOZIONI.map(p => `<option value="${p}"${p==='ALTRO'?' selected':''}>${p}</option>`).join('')}
+      </select>
+    </div>
+  `).join('');
+  document.getElementById('mappingModal').style.display = 'flex';
+}
+
+function skipMapping() {
+  // Assegna ALTRO a tutti i non mappati
+  unmappedEditors.forEach(e => { dbPromo[e] = 'ALTRO'; });
+  document.getElementById('mappingModal').style.display = 'none';
+  renderDashboard();
+}
+
+async function saveMapping() {
+  const spinner = document.getElementById('mappingSpinner');
+  spinner.style.display = 'inline-block';
+
+  const rows = document.querySelectorAll('#mappingList .modal-row');
+  const upserts = [];
+  rows.forEach(row => {
+    const sel = row.querySelector('select');
+    const editor = sel.dataset.editor;
+    const promo = sel.value;
+    dbPromo[editor] = promo;
+    upserts.push({ editore_gfk: editor, promo_2026: promo, promo_2025: promo });
+  });
+
+  try {
+    const { error } = await supabase
+      .from('editore_promozione')
+      .upsert(upserts, { onConflict: 'editore_gfk' });
+    if (error) throw error;
+    showToast(`✓ ${upserts.length} mappature salvate su Supabase`, 'success');
+  } catch(err) {
+    showToast('Errore salvataggio: ' + err.message, 'error');
+  }
+
+  spinner.style.display = 'none';
+  document.getElementById('mappingModal').style.display = 'none';
+  renderDashboard();
+}
+
+// ============================================================
+// AGGREGAZIONI
+// ============================================================
+function aggregaPerPromo(rows2026, rows2025) {
+  // rows da GFK publisher: Publisher, Value, Value%, Units, Units%, Ø-Price
+  // Aggrega per promozione
+  const agg = {};
+
+  function addRow(promo, row, year) {
+    if (!agg[promo]) agg[promo] = {
+      v26:0, u26:0, v25:0, u25:0, vqp26:0, uqp26:0, vqp25:0, uqp25:0
+    };
+    const val = parseFloat(row['Value']) || 0;
+    const unit = parseFloat(row['Units']) || 0;
+    const vp = parseFloat(row['Value %']) || 0;
+    const up = parseFloat(row['Units %']) || 0;
+    if (year === 2026) {
+      agg[promo].v26 += val;
+      agg[promo].u26 += unit;
+      agg[promo].vqp26 += vp;
+      agg[promo].uqp26 += up;
+    } else {
+      agg[promo].v25 += val;
+      agg[promo].u25 += unit;
+      agg[promo].vqp25 += vp;
+      agg[promo].uqp25 += up;
+    }
+  }
+
+  rows2026.filter(r => r['Publisher'] && r['Publisher'] !== 'Total').forEach(r => {
+    const promo = dbPromo[r['Publisher']] || 'ALTRO';
+    addRow(promo, r, 2026);
+  });
+  rows2025.filter(r => r['Publisher'] && r['Publisher'] !== 'Total').forEach(r => {
+    const promo = dbPromo[r['Publisher']] || 'ALTRO';
+    addRow(promo, r, 2025);
+  });
+
+  return agg;
+}
+
+function getTotal(rows, field) {
+  const totRow = rows.find(r => r['Publisher'] === 'Total' || r['Rank'] === 'Total');
+  return totRow ? (parseFloat(totRow[field]) || 0) : 0;
+}
+
+// ============================================================
+// RENDER DASHBOARD
+// ============================================================
+function renderDashboard() {
+  document.getElementById('tabsBar').style.display = 'flex';
+  showTab('recap');
+  document.getElementById('btnElabora').disabled = false;
+  document.getElementById('uploadStatus').textContent = 'Dashboard aggiornato ✓';
+}
+
+function showTab(tab) {
+  document.querySelectorAll('.tab').forEach((t,i) => {
+    t.classList.toggle('active', ['recap','pari','quadratura','generi'][i] === tab);
+  });
+  const mc = document.getElementById('mainContent');
+  if (tab === 'recap') mc.innerHTML = buildRecap();
+  else if (tab === 'pari') mc.innerHTML = buildPariPerimetro();
+  else if (tab === 'quadratura') mc.innerHTML = buildQuadratura();
+  else if (tab === 'generi') mc.innerHTML = buildGeneri();
+}
+
+// -------- RECAP --------
+function buildRecap() {
+  const r26 = parsedData.gfk2026.rows;
+  const r25 = parsedData.gfk2025.rows;
+
+  const tot26 = r26.find(r => r['Publisher'] === 'Total' || String(r['Rank']).toLowerCase() === 'total') || {};
+  const tot25 = r25.find(r => r['Publisher'] === 'Total' || String(r['Rank']).toLowerCase() === 'total') || {};
+
+  const v26 = parseFloat(tot26['Value']) || 0;
+  const v25 = parseFloat(tot25['Value']) || 0;
+  const u26 = parseFloat(tot26['Units']) || 0;
+  const u25 = parseFloat(tot25['Units']) || 0;
+  const pm26 = v26 / (u26 || 1);
+  const pm25 = v25 / (u25 || 1);
+
+  const dv = v26/v25-1, du = u26/u25-1, dpm = pm26/pm25-1;
+
+  // Prezzi medi per gruppo (da aggregazione)
+  const agg = aggregaPerPromo(r26, r25);
+
+  // Costruisce tabella prezzi medi per gruppi principali
+  const gruppiRows = Object.entries(GRUPPI).map(([g, promos]) => {
+    let tv26=0,tu26=0,tv25=0,tu25=0;
+    promos.forEach(p => {
+      if (agg[p]) { tv26+=agg[p].v26; tu26+=agg[p].u26; tv25+=agg[p].v25; tu25+=agg[p].u25; }
+    });
+    const pm26g = tv26/(tu26||1), pm25g = tv25/(tu25||1);
+    return { g, pm26: pm26g, pm25: pm25g };
+  });
+
+  return `
+  <div class="recap-grid">
+    <div class="recap-block">
+      <div class="recap-block-header">
+        <div class="recap-block-title">MERCATO TOTALE</div>
+        <div class="recap-block-badge">${weekLabel}</div>
+      </div>
+      <div class="recap-metrics">
+        <div class="metric">
+          <div class="metric-label">Value 2026</div>
+          <div class="metric-value">${fmtM(v26)}</div>
+          <div class="metric-delta ${dv>=0?'pos':'neg'}">${fmtPct(dv)} vs 2025</div>
+          <div class="metric-sub">Diff: +${fmtM(v26-v25)}</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Units 2026</div>
+          <div class="metric-value">${fmtK(u26)}</div>
+          <div class="metric-delta ${du>=0?'pos':'neg'}">${fmtPct(du)} vs 2025</div>
+          <div class="metric-sub">Diff: +${fmtK(u26-u25)}</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Prezzo Medio</div>
+          <div class="metric-value">${fmtEur(pm26)}</div>
+          <div class="metric-delta ${dpm>=0?'pos':'neg'}">${fmtPct(dpm)} vs 2025</div>
+          <div class="metric-sub">2025: ${fmtEur(pm25)}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="recap-block">
+      <div class="recap-block-header">
+        <div class="recap-block-title">PREZZI MEDI PER GRUPPO</div>
+      </div>
+      <div class="promo-table-wrap">
+        <table class="promo-table">
+          <thead>
+            <tr>
+              <th>Gruppo</th>
+              <th>PM 2026</th>
+              <th>PM 2025</th>
+              <th>Δ%</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${gruppiRows.map(row => {
+              const d = row.pm26/row.pm25-1;
+              return `<tr>
+                <td>${row.g}</td>
+                <td>${fmtEur(row.pm26)}</td>
+                <td>${fmtEur(row.pm25)}</td>
+                <td class="${d>=0?'pos':'neg'}">${fmtPct(d)}</td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="recap-block" style="margin-bottom:20px;">
+    <div class="recap-block-header">
+      <div class="recap-block-title">QUOTE DI MERCATO (VALUE %) — 2026 vs 2025</div>
+    </div>
+    <div class="promo-table-wrap">
+      <table class="promo-table">
+        <thead>
+          <tr>
+            <th>Promozione</th>
+            <th>Value 2026</th>
+            <th>Units 2026</th>
+            <th>QDM Value 2026</th>
+            <th>QDM Value 2025</th>
+            <th>Δ QDM Value</th>
+            <th>PM 2026</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${buildPromoRows(agg, v26, u26, v25, u25)}
+        </tbody>
+      </table>
+    </div>
+  </div>`;
+}
+
+function buildPromoRows(agg, totV26, totU26, totV25, totU25) {
+  return Object.entries(agg)
+    .filter(([p]) => p !== 'ALTRO')
+    .sort((a,b) => b[1].v26 - a[1].v26)
+    .concat(agg['ALTRO'] ? [['ALTRO', agg['ALTRO']]] : [])
+    .map(([p, d]) => {
+      const qdmV26 = d.v26 / (totV26||1);
+      const qdmV25 = d.v25 / (totV25||1);
+      const dq = qdmV25 > 0 ? qdmV26/qdmV25-1 : 0;
+      const pm26 = d.v26/(d.u26||1);
+      return `<tr>
+        <td>${p}</td>
+        <td>${fmtM(d.v26)}</td>
+        <td>${fmtK(d.u26)}</td>
+        <td>${fmtPct2(qdmV26)}</td>
+        <td>${fmtPct2(qdmV25)}</td>
+        <td class="${dq>=0?'pos':'neg'}">${fmtPct(dq)}</td>
+        <td>${fmtEur(pm26)}</td>
+      </tr>`;
+    }).join('');
+}
+
+// -------- PARI PERIMETRO / QUADRATURA --------
+function buildPariPerimetro() {
+  return buildTabellone('PARI PERIMETRO', parsedData.gfk2026.rows, parsedData.gfk2025.rows, false);
+}
+function buildQuadratura() {
+  return buildTabellone('QUADRATURA', parsedData.gfk2026.rows, parsedData.gfk2025.rows, true);
+}
+
+function buildTabellone(titolo, r26, r25, isQuadratura) {
+  // Aggrega per promozione
+  const agg = {};
+  function add(promo, v26, u26, v25, u25) {
+    if (!agg[promo]) agg[promo] = {v26:0,u26:0,v25:0,u25:0};
+    agg[promo].v26 += v26; agg[promo].u26 += u26;
+    agg[promo].v25 += v25; agg[promo].u25 += u25;
+  }
+
+  // Per pari perimetro: solo editori presenti in entrambi gli anni
+  const editori26 = new Set(r26.filter(r=>r['Publisher']&&r['Publisher']!=='Total').map(r=>r['Publisher']));
+  const editori25 = new Set(r25.filter(r=>r['Publisher']&&r['Publisher']!=='Total').map(r=>r['Publisher']));
+  const comuni = isQuadratura
+    ? editori26  // quadratura = tutti 2026
+    : new Set([...editori26].filter(e => editori25.has(e))); // pari = intersezione
+
+  r26.filter(r=>r['Publisher']&&r['Publisher']!=='Total'&&comuni.has(r['Publisher'])).forEach(r => {
+    const promo = dbPromo[r['Publisher']] || 'ALTRO';
+    const v = parseFloat(r['Value'])||0, u = parseFloat(r['Units'])||0;
+    add(promo, v, u, 0, 0);
+  });
+  r25.filter(r=>r['Publisher']&&r['Publisher']!=='Total'&&comuni.has(r['Publisher'])).forEach(r => {
+    const promo = dbPromo[r['Publisher']] || 'ALTRO';
+    const v = parseFloat(r['Value'])||0, u = parseFloat(r['Units'])||0;
+    add(promo, 0, 0, v, u);
+  });
+
+  const totV26 = Object.values(agg).reduce((s,d)=>s+d.v26,0);
+  const totU26 = Object.values(agg).reduce((s,d)=>s+d.u26,0);
+  const totV25 = Object.values(agg).reduce((s,d)=>s+d.v25,0);
+  const totU25 = Object.values(agg).reduce((s,d)=>s+d.u25,0);
+  const totPM26 = totV26/(totU26||1);
+  const totPM25 = totV25/(totU25||1);
+
+  const sorted = Object.entries(agg)
+    .filter(([p]) => p !== 'ALTRO')
+    .sort((a,b) => b[1].v26 - a[1].v26)
+    .concat(agg['ALTRO'] ? [['ALTRO', agg['ALTRO']]] : []);
+
+  const rows = sorted.map(([p, d]) => {
+    const pm26 = d.v26/(d.u26||1), pm25 = d.v25/(d.u25||1);
+    const qdmV26 = d.v26/(totV26||1), qdmU26 = d.u26/(totU26||1);
+    const qdmV25 = d.v25/(totV25||1), qdmU25 = d.u25/(totU25||1);
+    const dv = d.v25>0?d.v26/d.v25-1:0;
+    const du = d.u25>0?d.u26/d.u25-1:0;
+    const dpm = pm25>0?pm26/pm25-1:0;
+    return `<tr>
+      <td>${p}</td>
+      <td>${fmtM(d.v26)}</td>
+      <td>${fmtK(d.u26)}</td>
+      <td>${fmtEur(pm26)}</td>
+      <td>${fmtPct2(qdmV26)}</td>
+      <td>${fmtPct2(qdmU26)}</td>
+      <td class="${dv>=0?'pos':'neg'}">${fmtPct(dv)}</td>
+      <td class="${du>=0?'pos':'neg'}">${fmtPct(du)}</td>
+      <td class="${dpm>=0?'pos':'neg'}">${fmtPct(dpm)}</td>
+      <td>${fmtM(d.v25)}</td>
+      <td>${fmtK(d.u25)}</td>
+      <td>${fmtEur(pm25)}</td>
+      <td>${fmtPct2(qdmV25)}</td>
+      <td>${fmtPct2(qdmU25)}</td>
+    </tr>`;
+  }).join('');
+
+  const dv = totV25>0?totV26/totV25-1:0;
+  const du = totU25>0?totU26/totU25-1:0;
+  const dpm = totPM25>0?totPM26/totPM25-1:0;
+
+  return `
+  <div class="big-table-wrap">
+    <div class="big-table-header">
+      <div class="big-table-title">${titolo} — Editori ${isQuadratura?'2026':'Comuni 2026/2025'}</div>
+      <div style="font-size:11px;color:var(--text3);">${weekLabel}</div>
+    </div>
+    <div class="big-table-scroll">
+      <table class="big-table">
+        <thead>
+          <tr>
+            <th rowspan="2" style="text-align:left;vertical-align:bottom;padding-bottom:10px;">Promozione</th>
+            <th colspan="5">2026</th>
+            <th colspan="3">2026 vs 2025</th>
+            <th colspan="5">2025</th>
+          </tr>
+          <tr>
+            <th>Value</th><th>Units</th><th>PM</th><th>QDM Val%</th><th>QDM Unit%</th>
+            <th>Δ Val%</th><th>Δ Unit%</th><th>Δ PM%</th>
+            <th>Value</th><th>Units</th><th>PM</th><th>QDM Val%</th><th>QDM Unit%</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="total-row">
+            <td>Totale complessivo</td>
+            <td>${fmtM(totV26)}</td><td>${fmtK(totU26)}</td><td>${fmtEur(totPM26)}</td>
+            <td>100,0%</td><td>100,0%</td>
+            <td class="${dv>=0?'pos':'neg'}">${fmtPct(dv)}</td>
+            <td class="${du>=0?'pos':'neg'}">${fmtPct(du)}</td>
+            <td class="${dpm>=0?'pos':'neg'}">${fmtPct(dpm)}</td>
+            <td>${fmtM(totV25)}</td><td>${fmtK(totU25)}</td><td>${fmtEur(totPM25)}</td>
+            <td>100,0%</td><td>100,0%</td>
+          </tr>
+          ${rows}
+        </tbody>
+      </table>
+    </div>
+  </div>`;
+}
+
+// -------- GENERI --------
+function buildGeneri() {
+  const pde = parsedData.generiPDE.rows;
+  const merc = parsedData.generiMercato.rows;
+
+  function buildGenreTable(rows, titolo) {
+    const total = rows.find(r => String(r['ID']).toLowerCase()==='total' || String(r['Genre']).toLowerCase()==='total') || rows[0] || {};
+    const dataRows = rows.filter(r => String(r['ID']).toLowerCase()!=='total' && r['Genre']);
+    const totV26 = parseFloat(total['Value']) || 1;
+
+    return `
+    <div class="big-table-wrap">
+      <div class="big-table-header">
+        <div class="big-table-title">${titolo}</div>
+        <div style="font-size:11px;color:var(--text3);">${weekLabel}</div>
+      </div>
+      <div class="big-table-scroll">
+        <table class="big-table" style="min-width:700px;">
+          <thead>
+            <tr>
+              <th style="text-align:left;">Genere</th>
+              <th colspan="4">2026</th>
+              <th colspan="4">2025</th>
+              <th colspan="2">Δ 2026 vs 2025</th>
+            </tr>
+            <tr>
+              <th style="text-align:left;"></th>
+              <th>Value</th><th>Val%</th><th>Units</th><th>PM</th>
+              <th>Value</th><th>Val%</th><th>Units</th><th>PM</th>
+              <th>Δ Val%</th><th>Δ Unit%</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${dataRows.map(r => {
+              const v26 = parseFloat(r['Value'])||0;
+              const u26 = parseFloat(r['Units'])||0;
+              const vp26 = parseFloat(r['Value %'])||0;
+              const pm26 = parseFloat(r['Ø-Price'])||0;
+              // cerca colonne 2025 (hanno suffisso diverso - col 7-11)
+              const keys = Object.keys(r);
+              // struttura: ID, Genre, Value(26), Value%(26), Units(26), Units%(26), PM(26), Value(25), Value%(25), Units(25), Units%(25), PM(25), ...diff
+              const v25 = parseFloat(r[keys[7]])||0;
+              const vp25 = parseFloat(r[keys[8]])||0;
+              const u25 = parseFloat(r[keys[9]])||0;
+              const pm25 = parseFloat(r[keys[11]])||0;
+              const dv = parseFloat(r[keys[13]])||0;
+              const du = parseFloat(r[keys[15]])||0;
+              return `<tr>
+                <td>${r['Genre']||''}</td>
+                <td>${fmtM(v26)}</td>
+                <td>${fmtPct2(vp26)}</td>
+                <td>${fmtK(u26)}</td>
+                <td>${fmtEur(pm26)}</td>
+                <td>${fmtM(v25)}</td>
+                <td>${fmtPct2(vp25)}</td>
+                <td>${fmtK(u25)}</td>
+                <td>${fmtEur(pm25)}</td>
+                <td class="${dv>=0?'pos':'neg'}">${fmtPct(dv)}</td>
+                <td class="${du>=0?'pos':'neg'}">${fmtPct(du)}</td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>`;
+  }
+
+  return `
+  <div class="generi-grid">
+    ${buildGenreTable(pde, 'GENERI PDE')}
+    ${buildGenreTable(merc, 'GENERI MERCATO')}
+  </div>`;
+}
+
+// ============================================================
+// FORMATTERS
+// ============================================================
+const fmtM = v => {
+  if (!v && v !== 0) return '—';
+  if (Math.abs(v) >= 1e6) return (v/1e6).toLocaleString('it-IT',{minimumFractionDigits:1,maximumFractionDigits:1}) + 'M';
+  if (Math.abs(v) >= 1e3) return (v/1e3).toLocaleString('it-IT',{minimumFractionDigits:0,maximumFractionDigits:0}) + 'K';
+  return v.toLocaleString('it-IT',{minimumFractionDigits:0,maximumFractionDigits:0});
+};
+const fmtK = v => {
+  if (!v && v !== 0) return '—';
+  if (Math.abs(v) >= 1e6) return (v/1e6).toLocaleString('it-IT',{minimumFractionDigits:2,maximumFractionDigits:2}) + 'M';
+  if (Math.abs(v) >= 1e3) return (v/1e3).toLocaleString('it-IT',{minimumFractionDigits:1,maximumFractionDigits:1}) + 'K';
+  return v.toLocaleString('it-IT');
+};
+const fmtEur = v => v ? '€' + v.toLocaleString('it-IT',{minimumFractionDigits:2,maximumFractionDigits:2}) : '—';
+const fmtPct = v => {
+  if (v == null || isNaN(v)) return '—';
+  const s = (v*100).toLocaleString('it-IT',{minimumFractionDigits:1,maximumFractionDigits:1});
+  return (v >= 0 ? '+' : '') + s + '%';
+};
+const fmtPct2 = v => {
+  if (v == null || isNaN(v)) return '—';
+  return (v*100).toLocaleString('it-IT',{minimumFractionDigits:1,maximumFractionDigits:1}) + '%';
+};
+
+// ============================================================
+// TOAST
+// ============================================================
+function showToast(msg, type='success') {
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.textContent = msg;
+  document.getElementById('toastContainer').appendChild(t);
+  setTimeout(() => t.remove(), 3500);
+}
+</script>
+</body>
+</html>
