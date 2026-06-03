@@ -991,5 +991,30 @@ function showApp() {
   });
 })();
 </script>
+
+<script>
+// ── Controllo accesso: blocca agenti ──
+(async function() {
+  await new Promise(r => setTimeout(r, 600));
+  try {
+    const { data } = await sb.auth.getUser();
+    const role = data?.user?.user_metadata?.role || '';
+    if (role === 'agente') {
+      document.body.innerHTML = `
+        <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;
+          background:#0b1128;font-family:Arial,sans-serif;text-align:center;padding:20px;">
+          <div>
+            <div style="font-size:48px;margin-bottom:16px;">🔒</div>
+            <h2 style="color:#fff;margin-bottom:8px;">Accesso non autorizzato</h2>
+            <p style="color:#7a9ab8;margin-bottom:24px;">Non hai i permessi per accedere a questa applicazione.</p>
+            <a href="https://albertospde.github.io/pde-hub/"
+               style="background:#00b4e8;color:#fff;padding:10px 24px;border-radius:8px;
+               text-decoration:none;font-weight:600;">← Torna a PDE Hub</a>
+          </div>
+        </div>`;
+    }
+  } catch(e) { console.warn('Access check:', e); }
+})();
+</script>
 </body>
 </html>
