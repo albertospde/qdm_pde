@@ -529,7 +529,6 @@ function normalizeWeekKey(period) {
 // ── AGGREGAZIONI ─────────────────────────────────────────────
 function aggPerPromo(rows26, rows25, quadratura) {
   const agg = {};
-  // Riga totale: Publisher è null oppure stringa 'Total'
   const isTotal = r => {
     const pub = r['Publisher'];
     const rank = r['Rank'];
@@ -541,10 +540,19 @@ function aggPerPromo(rows26, rows25, quadratura) {
 
   const set26 = new Set(rows26.filter(r=>!isTotal(r)).map(r=>r['Publisher']));
   const set25 = new Set(rows25.filter(r=>!isTotal(r)).map(r=>r['Publisher']));
-  const comuni = new Set([...set26].filter(e=>set25.has(e)));
 
-  const filtro26 = quadratura ? set26 : comuni;
-  const filtro25 = quadratura ? set26 : comuni;
+  // PARITÀ:
+  //   2026 → tutti gli editori 2026 (set26) → totale 566M
+  //   2025 → solo gli editori 2026 che esistevano anche nel 2025 (intersezione)
+  //   Confronto: stesso perimetro di editori, anni diversi
+  //
+  // QUADRATURA:
+  //   2026 → tutti gli editori 2026 (set26)
+  //   2025 → tutti gli editori 2025 (set25, perimetro nativo 2025)
+  //   Confronto: ognuno col proprio perimetro nativo
+
+  const filtro26 = set26; // 2026 sempre completo in entrambe le viste
+  const filtro25 = quadratura ? set25 : new Set([...set26].filter(e=>set25.has(e)));
 
   rows26.filter(r=>!isTotal(r)&&filtro26.has(r['Publisher'])).forEach(r=>{
     const p = dbPromo[r['Publisher']] || 'ALTRO';
