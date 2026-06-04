@@ -79,6 +79,12 @@ table tr:last-child td{border-bottom:none;}
 .tg th{background:rgba(0,180,232,.08);color:var(--accent);text-align:center!important;font-size:10px;}
 .tg th.l{text-align:left!important;color:var(--text3);}
 
+/* sortable headers */
+table th.sortable{cursor:pointer;user-select:none;position:relative;}
+table th.sortable:hover{color:var(--text);background:rgba(0,180,232,.06);}
+table th.sort-asc::after{content:' ▲';color:var(--accent);font-size:9px;}
+table th.sort-desc::after{content:' ▼';color:var(--accent);font-size:9px;}
+
 .two-col{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
 
 .modal-ov{position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:1000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);}
@@ -683,6 +689,83 @@ function showTab(tab) {
   else if (tab==='top20') mc.innerHTML=buildTop20();
 }
 
+// ── SORT ENGINE ───────────────────────────────────────────────
+// sortState[tableId] = {col: Number, dir: 'asc'|'desc'}
+const sortState = {};
+
+// Chiama questo dopo aver inserito l'HTML nel DOM.
+// tableId = stringa univoca per la tabella
+// totSelector = selettore CSS della riga totale da escludere dall'ordinamento (opzionale)
+function initSort(tableId, totSelector) {
+  const table = document.getElementById(tableId);
+  if (!table) return;
+  const ths = table.querySelectorAll('thead th.sortable');
+  ths.forEach(th => {
+    th.addEventListener('click', () => {
+      const col = parseInt(th.dataset.col);
+      const prev = sortState[tableId] || {};
+      const dir = (prev.col === col && prev.dir === 'asc') ? 'desc' : 'asc';
+      sortState[tableId] = {col, dir};
+      // aggiorna indicatori
+      ths.forEach(h => { h.classList.remove('sort-asc','sort-desc'); });
+      th.classList.add(dir === 'asc' ? 'sort-asc' : 'sort-desc');
+      sortTableDOM(table, col, dir, totSelector);
+    });
+  });
+}
+
+function sortTableDOM(table, col, dir, totSelector) {
+  const tbody = table.querySelector('tbody');
+  const rows = Array.from(tbody.querySelectorAll('tr'));
+  const totRows = totSelector ? rows.filter(r => r.matches(totSelector)) : [];
+  const dataRows = rows.filter(r => !totSelector || !r.matches(totSelector));
+
+  dataRows.sort((a, b) => {
+    const av = cellVal(a, col);
+    const bv = cellVal(b, col);
+    // Valori vuoti / '—' sempre in fondo
+    if (!av || av === '—') return 1;
+    if (!bv || bv === '—') return -1;
+    // Prova numerico
+    const an = parseItNum(av);
+    const bn = parseItNum(bv);
+    const bothNum = !isNaN(an) && !isNaN(bn) && an !== 0 || bn !== 0;
+    if (!isNaN(an) && !isNaN(bn)) {
+      return dir === 'asc' ? an - bn : bn - an;
+    }
+    // Stringa
+    return dir === 'asc' ? av.localeCompare(bv,'it') : bv.localeCompare(av,'it');
+  });
+
+  // tot rows always stay at top
+  dataRows.forEach(r => tbody.appendChild(r));
+  totRows.forEach(r => tbody.insertBefore(r, tbody.firstChild));
+}
+
+function cellVal(row, col) {
+  const cells = row.querySelectorAll('td');
+  const cell = cells[col];
+  if (!cell) return '';
+  return cell.textContent.trim();
+}
+
+function parseItNum(s) {
+  if (!s || s === '—') return 0;
+  // rimuove €, %, ▲, ▼, spazi, converte separatori italiani
+  const clean = s.replace(/[€%+▲▼\s]/g,'').replace(/\./g,'').replace(',','.');
+  const n = parseFloat(clean);
+  return isNaN(n) ? 0 : n;
+}
+
+// Genera attributi th sortable. colOffset usato per tabelle con rowspan
+function sh(label, col, isLeft=false) {
+  return `<th class="${isLeft?'l ':''} sortable" data-col="${col}">${label}</th>`;
+}
+function shFixed(label, isLeft=false) {
+  // th non sortable (es. header di gruppo con colspan)
+  return `<th${isLeft?' class="l"':''}>${label}</th>`;
+}
+
 // ── RECAP ────────────────────────────────────────────────────
 function buildRecap() {
   const rows = currentData.recap;
@@ -698,11 +781,20 @@ function buildRecap() {
     return {g, pm26:tu26?tv26/tu26:0, pm25:tu25?tv25/tu25:0};
   });
 
-  const sorted=[...rows].filter(r=>r.promozione!=='ALTRO').sort((a,b)=>b.value_26-a.value_26);
-  const altro=rows.find(r=>r.promozione==='ALTRO');
-  const all=altro?[...sorted,altro]:sorted;
+  const getSortedRecap = (tableId, defaultKey) => {
+    const st = sortState[tableId];
+    const arr = [...rows].filter(r=>r.promozione!=='ALTRO');
+    const altro = rows.find(r=>r.promozione==='ALTRO');
+    if (!st) {
+      arr.sort((a,b)=>b.value_26-a.value_26);
+    }
+    return altro ? [...arr, altro] : arr;
+  };
 
-  return `
+  // per le tabelle piccole ordiniamo al volo in JS quando si clicca
+  const all = getSortedRecap('tbl-recap-det', 'value_26');
+
+  const html = `
   <div class="metrics-row">
     <div class="mc"><div class="mc-lbl">Value 2026</div>
       <div class="mc-val">${fmtEurFull(totV26)}</div>
@@ -719,16 +811,20 @@ function buildRecap() {
   </div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px">
     <div class="blk"><div class="blk-hdr"><span class="blk-title">PREZZO MEDIO PER GRUPPO — 2026 vs 2025</span></div>
-      <div class="tbl-wrap"><table>
-        <thead><tr><th class="l">Gruppo</th><th>PM 2026</th><th>PM 2025</th><th>Δ%</th></tr></thead>
+      <div class="tbl-wrap"><table id="tbl-recap-grp">
+        <thead><tr>
+          ${sh('Gruppo',0,true)}${sh('PM 2026',1)}${sh('PM 2025',2)}${sh('Δ%',3)}
+        </tr></thead>
         <tbody>${gruppiRows.map(({g,pm26,pm25})=>`<tr>
           <td class="l">${g}</td><td>${fmtEur(pm26)}</td><td>${fmtEur(pm25)}</td>
           <td class="${pm25&&delta(pm26,pm25)>=0?'pos':'neg'}">${pm25?fmtPct(delta(pm26,pm25)):'—'}</td>
         </tr>`).join('')}</tbody>
       </table></div></div>
     <div class="blk"><div class="blk-hdr"><span class="blk-title">Quote Value % — 2026 vs 2025</span></div>
-      <div class="tbl-wrap"><table>
-        <thead><tr><th class="l">Promozione</th><th>QDM 2026</th><th>QDM 2025</th><th>Δ pp</th></tr></thead>
+      <div class="tbl-wrap"><table id="tbl-recap-qdm">
+        <thead><tr>
+          ${sh('Promozione',0,true)}${sh('QDM 2026',1)}${sh('QDM 2025',2)}${sh('Δ pp',3)}
+        </tr></thead>
         <tbody>${all.map(r=>{const d=(r.qdm_value_26||0)-(r.qdm_value_25p||0);return `<tr>
           <td class="l">${r.promozione}</td>
           <td>${fmtPct2(r.qdm_value_26)}</td><td>${fmtPct2(r.qdm_value_25p)}</td>
@@ -737,13 +833,17 @@ function buildRecap() {
       </table></div></div>
   </div>
   <div class="blk"><div class="blk-hdr"><span class="blk-title">Dettaglio per Promozione</span></div>
-    <div class="tbl-wrap"><table>
+    <div class="tbl-wrap"><table id="tbl-recap-det">
       <thead>
-        <tr class="tg"><th class="l" rowspan="2">Promozione</th>
-          <th colspan="4">2026</th><th colspan="4">2025 Parità</th><th colspan="3">Δ</th></tr>
-        <tr><th>Value</th><th>Units</th><th>PM</th><th>QDM Val%</th>
-            <th>Value</th><th>Units</th><th>PM</th><th>QDM Val%</th>
-            <th>Δ Val%</th><th>Δ Unit%</th><th>Δ PM%</th></tr>
+        <tr class="tg">
+          <th class="l sortable" data-col="0" rowspan="2">Promozione</th>
+          <th colspan="4">2026</th><th colspan="4">2025 Parità</th><th colspan="3">Δ</th>
+        </tr>
+        <tr>
+          ${sh('Value',1)}${sh('Units',2)}${sh('PM',3)}${sh('QDM Val%',4)}
+          ${sh('Value',5)}${sh('Units',6)}${sh('PM',7)}${sh('QDM Val%',8)}
+          ${sh('Δ Val%',9)}${sh('Δ Unit%',10)}${sh('Δ PM%',11)}
+        </tr>
       </thead>
       <tbody>
         <tr class="tot"><td class="l">Totale</td>
@@ -764,10 +864,18 @@ function buildRecap() {
           </tr>`;}).join('')}
       </tbody>
     </table></div></div>`;
+
+  setTimeout(()=>{
+    initSort('tbl-recap-grp');
+    initSort('tbl-recap-qdm');
+    initSort('tbl-recap-det', 'tr.tot');
+  }, 0);
+  return html;
 }
 
 // ── PARI PERIMETRO / QUADRATURA ───────────────────────────────
 function buildTabellone(isQuad) {
+  const tblId = isQuad ? 'tbl-quad' : 'tbl-pari';
   const rows = currentData.recap;
   const v26f=r=>r.value_26||0, u26f=r=>r.units_26||0;
   const v25f=r=>isQuad?(r.value_25q||0):(r.value_25p||0);
@@ -778,18 +886,23 @@ function buildTabellone(isQuad) {
   const sorted=[...rows].filter(r=>r.promozione!=='ALTRO').sort((a,b)=>v26f(b)-v26f(a));
   const altro=rows.find(r=>r.promozione==='ALTRO');
   const all=altro?[...sorted,altro]:sorted;
-  return `<div class="blk">
+
+  const html = `<div class="blk">
     <div class="blk-hdr">
       <span class="blk-title">${isQuad?'QUADRATURA':'PARI PERIMETRO'} — ${isQuad?'tutti editori 2026':'editori comuni 2026/2025'}</span>
       <span style="font-size:11px;color:var(--text3)">${currentWeekKey?.replace('_',' ')}</span>
     </div>
-    <div class="tbl-wrap"><table>
+    <div class="tbl-wrap"><table id="${tblId}">
       <thead>
-        <tr class="tg"><th class="l" rowspan="2">Promozione</th>
-          <th colspan="5">2026</th><th colspan="3">Δ</th><th colspan="5">2025</th></tr>
-        <tr><th>Value</th><th>Units</th><th>PM</th><th>QDM Val%</th><th>QDM Unit%</th>
-            <th>Δ Val%</th><th>Δ Unit%</th><th>Δ PM%</th>
-            <th>Value</th><th>Units</th><th>PM</th><th>QDM Val%</th><th>QDM Unit%</th></tr>
+        <tr class="tg">
+          <th class="l sortable" data-col="0" rowspan="2">Promozione</th>
+          <th colspan="5">2026</th><th colspan="3">Δ</th><th colspan="5">2025</th>
+        </tr>
+        <tr>
+          ${sh('Value',1)}${sh('Units',2)}${sh('PM',3)}${sh('QDM Val%',4)}${sh('QDM Unit%',5)}
+          ${sh('Δ Val%',6)}${sh('Δ Unit%',7)}${sh('Δ PM%',8)}
+          ${sh('Value',9)}${sh('Units',10)}${sh('PM',11)}${sh('QDM Val%',12)}${sh('QDM Unit%',13)}
+        </tr>
       </thead>
       <tbody>
         <tr class="tot"><td class="l">Totale</td>
@@ -815,36 +928,45 @@ function buildTabellone(isQuad) {
           </tr>`;}).join('')}
       </tbody>
     </table></div></div>`;
+
+  setTimeout(()=>initSort(tblId, 'tr.tot'), 0);
+  return html;
 }
 
 // ── GENERI ───────────────────────────────────────────────────
 function buildGeneri() {
   const pde=currentData.generi.filter(r=>r.tipo==='PDE');
   const merc=currentData.generi.filter(r=>r.tipo==='MERCATO');
-  function gt(rows,titolo) {
-    return `<div class="blk"><div class="blk-hdr"><span class="blk-title">${titolo}</span></div>
-      <div class="tbl-wrap"><table>
-        <thead><tr class="tg"><th class="l" rowspan="2">Genere</th>
-          <th colspan="4">2026</th><th colspan="4">2025</th><th colspan="2">Δ</th></tr>
-          <tr><th>Value</th><th>Val%</th><th>Units</th><th>PM</th>
-              <th>Value</th><th>Val%</th><th>Units</th><th>PM</th>
-              <th>Δ Val%</th><th>Δ Unit%</th></tr>
+  function gt(rows, titolo, tblId) {
+    const html = `<div class="blk"><div class="blk-hdr"><span class="blk-title">${titolo}</span></div>
+      <div class="tbl-wrap"><table id="${tblId}">
+        <thead>
+          <tr class="tg">
+            <th class="l sortable" data-col="0" rowspan="2">Genere</th>
+            <th colspan="4">2026</th><th colspan="4">2025</th><th colspan="2">Δ</th>
+          </tr>
+          <tr>
+            ${sh('Value',1)}${sh('Val%',2)}${sh('Units',3)}${sh('PM',4)}
+            ${sh('Value',5)}${sh('Val%',6)}${sh('Units',7)}${sh('PM',8)}
+            ${sh('Δ Val%',9)}${sh('Δ Unit%',10)}
+          </tr>
         </thead>
         <tbody>${rows.map(r=>`<tr>
           <td class="l">${r.genre}</td>
-          <td>${fmtM(r.value_26)}</td><td>${fmtPct2(r.value_pct_26)}</td><td>${fmtK(r.units_26)}</td><td>${fmtEur(r.pm_26)}</td>
-          <td>${fmtM(r.value_25)}</td><td>${fmtPct2(r.value_pct_25)}</td><td>${fmtK(r.units_25)}</td><td>${fmtEur(r.pm_25)}</td>
+          <td>${fmtEurFull(r.value_26)}</td><td>${fmtPct2(r.value_pct_26)}</td><td>${fmtInt(r.units_26)}</td><td>${fmtEur(r.pm_26)}</td>
+          <td>${fmtEurFull(r.value_25)}</td><td>${fmtPct2(r.value_pct_25)}</td><td>${fmtInt(r.units_25)}</td><td>${fmtEur(r.pm_25)}</td>
           <td class="${(r.delta_value||0)>=0?'pos':'neg'}">${fmtPct(r.delta_value)}</td>
           <td class="${(r.delta_units||0)>=0?'pos':'neg'}">${fmtPct(r.delta_units)}</td>
         </tr>`).join('')}</tbody>
       </table></div></div>`;
+    setTimeout(()=>initSort(tblId), 0);
+    return html;
   }
-  return `<div class="two-col">${gt(pde,'GENERI PDE')}${gt(merc,'GENERI MERCATO')}</div>`;
+  return `<div class="two-col">${gt(pde,'GENERI PDE','tbl-generi-pde')}${gt(merc,'GENERI MERCATO','tbl-generi-merc')}</div>`;
 }
 
 // ── TOP 20 ───────────────────────────────────────────────────
 function buildTop20() {
-  // Filtra solo titoli PDE (promozione diversa da ALTRO e riconosciuta come PDE)
   const PDE_PROMOS = new Set(['PDE SERVIZI COMM. PER EDITORIA','PDE SERVICE']);
   const week=currentData.top20.filter(r=>r.tipo==='WEEK'&&PDE_PROMOS.has(r.promozione)).sort((a,b)=>a.rank_pos-b.rank_pos);
   const tot=currentData.top20.filter(r=>r.tipo==='TOTALE'&&PDE_PROMOS.has(r.promozione)).sort((a,b)=>a.rank_pos-b.rank_pos);
@@ -854,15 +976,18 @@ function buildTop20() {
     if(n===3) return `<span class="rank-b b">#3</span>`;
     return `<span class="rank-b">#${n}</span>`;
   }
-  function t20(rows,titolo){
+  function t20(rows, titolo, tblId){
     if(!rows.length) return `<div class="blk"><div class="blk-hdr"><span class="blk-title">${titolo}</span></div><div style="padding:20px;text-align:center;color:var(--text3);font-size:12px">Nessun titolo PDE in classifica</div></div>`;
-    return `<div class="blk" style="margin-bottom:0">
+    const html = `<div class="blk" style="margin-bottom:0">
       <div class="blk-hdr"><span class="blk-title">${titolo}</span><span style="font-size:10px;color:var(--text3)">${rows.length} titoli PDE</span></div>
-      <div class="tbl-wrap"><table>
+      <div class="tbl-wrap"><table id="${tblId}">
         <thead><tr>
-          <th>#Mkt</th><th class="l">Titolo</th><th class="l">Autore</th>
-          <th class="l">Editore</th><th class="l">Genere</th>
-          <th>Value €</th><th>Val%</th><th>Units</th><th>PM</th>
+          ${sh('#Mkt',0)}
+          ${sh('Titolo',1,true)}
+          ${sh('Autore',2,true)}
+          ${sh('Editore',3,true)}
+          ${sh('Genere',4,true)}
+          ${sh('Value €',5)}${sh('Val%',6)}${sh('Units',7)}${sh('PM',8)}
         </tr></thead>
         <tbody>${rows.map(r=>`<tr>
           <td>${rb(r.rank_pos)}</td>
@@ -876,8 +1001,10 @@ function buildTop20() {
           <td>${fmtEur(r.pm)}</td>
         </tr>`).join('')}</tbody>
       </table></div></div>`;
+    setTimeout(()=>initSort(tblId), 0);
+    return html;
   }
-  return `<div class="two-col">${t20(week,'TOP 20 SETTIMANA — Titoli PDE')}${t20(tot,'TOP 20 PROGRESSIVO — Titoli PDE')}</div>`;
+  return `<div class="two-col">${t20(week,'TOP 20 SETTIMANA — Titoli PDE','tbl-top20-week')}${t20(tot,'TOP 20 PROGRESSIVO — Titoli PDE','tbl-top20-tot')}</div>`;
 }
 
 // ── UTILS ────────────────────────────────────────────────────
