@@ -611,7 +611,6 @@ function parseTop20(rows, tipo, weekKey) {
       const rk = r['Rank'];
       return rk != null && !isNaN(Number(rk)) && String(rk).toLowerCase() !== 'total';
     })
-    .slice(0, 20)
     .map(r => {
       // Value e Units della settimana: usa la seconda occorrenza se esiste, altrimenti la prima
       const value   = Number(r['Value_2']   ?? r['Value'])   || 0;
@@ -1007,8 +1006,8 @@ function buildGeneri() {
 // ── TOP 20 ───────────────────────────────────────────────────
 function buildTop20() {
   const PDE_PROMOS = new Set(['PDE SERVIZI COMM. PER EDITORIA','PDE SERVICE']);
-  const week=currentData.top20.filter(r=>r.tipo==='WEEK'&&PDE_PROMOS.has(r.promozione)).sort((a,b)=>a.rank_pos-b.rank_pos);
-  const tot=currentData.top20.filter(r=>r.tipo==='TOTALE'&&PDE_PROMOS.has(r.promozione)).sort((a,b)=>a.rank_pos-b.rank_pos);
+  const week=currentData.top20.filter(r=>r.tipo==='WEEK'&&PDE_PROMOS.has(r.promozione)).sort((a,b)=>a.rank_pos-b.rank_pos).slice(0,20);
+  const tot=currentData.top20.filter(r=>r.tipo==='TOTALE'&&PDE_PROMOS.has(r.promozione)).sort((a,b)=>a.rank_pos-b.rank_pos).slice(0,20);
   function rb(n){
     if(n===1) return `<span class="rank-b g">#1</span>`;
     if(n===2) return `<span class="rank-b s">#2</span>`;
