@@ -798,25 +798,24 @@ function shFixed(label, isLeft=false) {
 // ── RECAP ────────────────────────────────────────────────────
 function buildRecap() {
   const rows = currentData.recap;
-  const totV26=rows.reduce((s,r)=>s+(r.value_26||0),0);
-  const totU26=rows.reduce((s,r)=>s+(r.units_26||0),0);
-  const totV25=rows.reduce((s,r)=>s+(r.value_25p||0),0);
-  const totU25=rows.reduce((s,r)=>s+(r.units_25p||0),0);
+  // Supabase restituisce i float come stringhe — forza conversione numerica
+  const n = v => Number(v) || 0;
+  const totV26=rows.reduce((s,r)=>s+n(r.value_26),0);
+  const totU26=rows.reduce((s,r)=>s+n(r.units_26),0);
+  const totV25=rows.reduce((s,r)=>s+n(r.value_25p),0);
+  const totU25=rows.reduce((s,r)=>s+n(r.units_25p),0);
   const pm26=totU26?totV26/totU26:0, pm25=totU25?totV25/totU25:0;
 
   const gruppiRows = Object.entries(GRUPPI).map(([g,promos])=>{
     let tv26=0,tu26=0,tv25=0,tu25=0;
-    promos.forEach(p=>{const r=rows.find(x=>x.promozione===p);if(r){tv26+=r.value_26||0;tu26+=r.units_26||0;tv25+=r.value_25p||0;tu25+=r.units_25p||0;}});
+    promos.forEach(p=>{const r=rows.find(x=>x.promozione===p);if(r){tv26+=n(r.value_26);tu26+=n(r.units_26);tv25+=n(r.value_25p);tu25+=n(r.units_25p);}});
     return {g, pm26:tu26?tv26/tu26:0, pm25:tu25?tv25/tu25:0};
   });
 
-  const getSortedRecap = (tableId, defaultKey) => {
-    const st = sortState[tableId];
+  const getSortedRecap = (tableId) => {
     const arr = [...rows].filter(r=>r.promozione!=='ALTRO');
     const altro = rows.find(r=>r.promozione==='ALTRO');
-    if (!st) {
-      arr.sort((a,b)=>b.value_26-a.value_26);
-    }
+    arr.sort((a,b)=>n(b.value_26)-n(a.value_26));
     return altro ? [...arr, altro] : arr;
   };
 
@@ -882,13 +881,13 @@ function buildRecap() {
           <td class="${delta(totU26,totU25)>=0?'pos':'neg'}">${fmtPct(delta(totU26,totU25))}</td>
           <td class="${delta(pm26,pm25)>=0?'pos':'neg'}">${fmtPct(delta(pm26,pm25))}</td></tr>
         ${all.map(r=>{
-          const pm26r=r.units_26?r.value_26/r.units_26:0;
-          const pm25r=r.units_25p?r.value_25p/r.units_25p:0;
+          const pm26r=n(r.units_26)?n(r.value_26)/n(r.units_26):0;
+          const pm25r=n(r.units_25p)?n(r.value_25p)/n(r.units_25p):0;
           return `<tr><td class="l">${r.promozione}</td>
-            <td>${fmtEurFull(r.value_26)}</td><td>${fmtInt(r.units_26)}</td><td>${fmtEur(pm26r)}</td><td>${fmtPct2(r.qdm_value_26)}</td>
-            <td>${fmtEurFull(r.value_25p)}</td><td>${fmtInt(r.units_25p)}</td><td>${fmtEur(pm25r)}</td><td>${fmtPct2(r.qdm_value_25p)}</td>
-            <td class="${r.value_25p?delta(r.value_26,r.value_25p)>=0?'pos':'neg':''}">${r.value_25p?fmtPct(delta(r.value_26,r.value_25p)):'—'}</td>
-            <td class="${r.units_25p?delta(r.units_26,r.units_25p)>=0?'pos':'neg':''}">${r.units_25p?fmtPct(delta(r.units_26,r.units_25p)):'—'}</td>
+            <td>${fmtEurFull(n(r.value_26))}</td><td>${fmtInt(n(r.units_26))}</td><td>${fmtEur(pm26r)}</td><td>${fmtPct2(n(r.qdm_value_26))}</td>
+            <td>${fmtEurFull(n(r.value_25p))}</td><td>${fmtInt(n(r.units_25p))}</td><td>${fmtEur(pm25r)}</td><td>${fmtPct2(n(r.qdm_value_25p))}</td>
+            <td class="${n(r.value_25p)?delta(n(r.value_26),n(r.value_25p))>=0?'pos':'neg':''}">${n(r.value_25p)?fmtPct(delta(n(r.value_26),n(r.value_25p))):'—'}</td>
+            <td class="${n(r.units_25p)?delta(n(r.units_26),n(r.units_25p))>=0?'pos':'neg':''}">${n(r.units_25p)?fmtPct(delta(n(r.units_26),n(r.units_25p))):'—'}</td>
             <td class="${pm25r?delta(pm26r,pm25r)>=0?'pos':'neg':''}">${pm25r?fmtPct(delta(pm26r,pm25r)):'—'}</td>
           </tr>`;}).join('')}
       </tbody>
@@ -906,9 +905,10 @@ function buildRecap() {
 function buildTabellone(isQuad) {
   const tblId = isQuad ? 'tbl-quad' : 'tbl-pari';
   const rows = currentData.recap;
-  const v26f=r=>r.value_26||0, u26f=r=>r.units_26||0;
-  const v25f=r=>isQuad?(r.value_25q||0):(r.value_25p||0);
-  const u25f=r=>isQuad?(r.units_25q||0):(r.units_25p||0);
+  const n = v => Number(v) || 0;
+  const v26f=r=>n(r.value_26), u26f=r=>n(r.units_26);
+  const v25f=r=>isQuad?n(r.value_25q):n(r.value_25p);
+  const u25f=r=>isQuad?n(r.units_25q):n(r.units_25p);
   const totV26=rows.reduce((s,r)=>s+v26f(r),0), totU26=rows.reduce((s,r)=>s+u26f(r),0);
   const totV25=rows.reduce((s,r)=>s+v25f(r),0), totU25=rows.reduce((s,r)=>s+u25f(r),0);
   const totPM26=totU26?totV26/totU26:0, totPM25=totU25?totV25/totU25:0;
@@ -980,13 +980,15 @@ function buildGeneri() {
             ${sh('Δ Val%',9)}${sh('Δ Unit%',10)}
           </tr>
         </thead>
-        <tbody>${rows.map(r=>`<tr>
+        <tbody>${rows.map(r=>{
+          const n = v => Number(v) || 0;
+          return `<tr>
           <td class="l">${r.genre}</td>
-          <td>${fmtEurFull(r.value_26)}</td><td>${fmtPct2(r.value_pct_26)}</td><td>${fmtInt(r.units_26)}</td><td>${fmtEur(r.pm_26)}</td>
-          <td>${fmtEurFull(r.value_25)}</td><td>${fmtPct2(r.value_pct_25)}</td><td>${fmtInt(r.units_25)}</td><td>${fmtEur(r.pm_25)}</td>
-          <td class="${(r.delta_value||0)>=0?'pos':'neg'}">${fmtPct(r.delta_value)}</td>
-          <td class="${(r.delta_units||0)>=0?'pos':'neg'}">${fmtPct(r.delta_units)}</td>
-        </tr>`).join('')}</tbody>
+          <td>${fmtEurFull(n(r.value_26))}</td><td>${fmtPct2(n(r.value_pct_26))}</td><td>${fmtInt(n(r.units_26))}</td><td>${fmtEur(n(r.pm_26))}</td>
+          <td>${fmtEurFull(n(r.value_25))}</td><td>${fmtPct2(n(r.value_pct_25))}</td><td>${fmtInt(n(r.units_25))}</td><td>${fmtEur(n(r.pm_25))}</td>
+          <td class="${n(r.delta_value)>=0?'pos':'neg'}">${fmtPct(n(r.delta_value))}</td>
+          <td class="${n(r.delta_units)>=0?'pos':'neg'}">${fmtPct(n(r.delta_units))}</td>
+        </tr>`}).join('')}</tbody>
       </table></div></div>`;
     setTimeout(()=>initSort(tblId), 0);
     return html;
@@ -1019,15 +1021,15 @@ function buildTop20() {
           ${sh('Value €',5)}${sh('Val%',6)}${sh('Units',7)}${sh('PM',8)}
         </tr></thead>
         <tbody>${rows.map(r=>`<tr>
-          <td>${rb(r.rank_pos)}</td>
+          <td>${rb(Number(r.rank_pos))}</td>
           <td class="l" style="max-width:180px;white-space:normal;line-height:1.3">${r.title||'—'}</td>
           <td class="l" style="max-width:120px;white-space:normal">${r.author||'—'}</td>
           <td class="l dim">${r.publisher||'—'}</td>
           <td class="l dim">${r.genre||'—'}</td>
-          <td>${r.value?'€'+Math.round(r.value).toLocaleString('it-IT'):'—'}</td>
-          <td>${fmtPct2(r.value_pct)}</td>
-          <td>${r.units?Math.round(r.units).toLocaleString('it-IT'):'—'}</td>
-          <td>${fmtEur(r.pm)}</td>
+          <td>${Number(r.value)?'€'+Math.round(Number(r.value)).toLocaleString('it-IT'):'—'}</td>
+          <td>${fmtPct2(Number(r.value_pct))}</td>
+          <td>${Number(r.units)?Math.round(Number(r.units)).toLocaleString('it-IT'):'—'}</td>
+          <td>${fmtEur(Number(r.pm))}</td>
         </tr>`).join('')}</tbody>
       </table></div></div>`;
     setTimeout(()=>initSort(tblId), 0);
