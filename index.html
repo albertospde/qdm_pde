@@ -287,18 +287,16 @@ async function handleFiles(fileList) {
 
 // ── PARSER ───────────────────────────────────────────────────
 function parseGFK(buf) {
+  // Usa raw:true per mantenere i numeri come numeri (non stringhe)
   const wb = XLSX.read(buf, {type:'array'});
   const ws = wb.Sheets[wb.SheetNames[0]];
-  const raw = XLSX.utils.sheet_to_json(ws, {header:1, defval:null, raw:false});
-  // raw:false → tutte le celle come stringhe, evita problemi di tipo
+  const raw = XLSX.utils.sheet_to_json(ws, {header:1, defval:null, raw:true});
 
-  // Scansiona le prime 20 righe cercando coppie chiave/valore
-  // NON usa indici fissi — cerca la chiave per nome
+  // Estrai meta: scansiona le prime 20 righe per coppie chiave/valore
   const meta = {};
   for (let i = 0; i < 20; i++) {
     const r = raw[i];
     if (!r) continue;
-    // Trova la prima cella non-null della riga
     const nonNull = r.filter(v => v != null && String(v).trim() !== '');
     if (nonNull.length >= 2) {
       const k = String(nonNull[0]).trim();
@@ -307,14 +305,12 @@ function parseGFK(buf) {
     }
   }
 
-  // Trova la riga header: prima riga con >=3 celle non-null
-  // che inizia esattamente con 'Rank' o 'ID'
+  // Trova riga header: prima riga con cella [0] = 'Rank' o 'ID'
   let headerRowIdx = -1;
-  for (let i = 10; i < 22; i++) {
+  for (let i = 10; i < 25; i++) {
     const r = raw[i] || [];
-    const nonNull = r.filter(v => v != null && String(v).trim() !== '');
-    const first = nonNull.length > 0 ? String(nonNull[0]).trim() : '';
-    if (nonNull.length >= 3 && (first === 'Rank' || first === 'ID')) {
+    const first = r[0] != null ? String(r[0]).trim() : '';
+    if (first === 'Rank' || first === 'ID') {
       headerRowIdx = i;
       break;
     }
@@ -324,20 +320,36 @@ function parseGFK(buf) {
   const firstHeader = String((raw[headerRowIdx] || [])[0] || '').trim();
   const isGeneri = firstHeader === 'ID';
 
-  const headers = (raw[headerRowIdx] || []).map((h,i) =>
+  // Costruisci headers: mantieni tutti i nomi, gestisci duplicati
+  const rawHeaders = raw[headerRowIdx] || [];
+  const headers = rawHeaders.map((h, i) =>
     h != null && String(h).trim() !== '' ? String(h).trim() : `_c${i}`
   );
+
+  // Per i file Top20 che hanno due colonne 'Rank', 'Value', 'Units', 'Value %', 'Units %', 'Ø-Price'
+  // le colonne della settimana vengono DOPO quelle "since release"
+  // Strategia: per Top20, tieni traccia degli indici esatti per nome
+  const colIndex = {}; // nome → [lista indici]
+  headers.forEach((h, i) => {
+    if (!colIndex[h]) colIndex[h] = [];
+    colIndex[h].push(i);
+  });
 
   const rows = [];
   for (let i = headerRowIdx + 1; i < raw.length; i++) {
     const r = raw[i];
     if (!r || r.every(v => v == null || String(v).trim() === '')) continue;
     const obj = {};
-    headers.forEach((h,j) => { obj[h] = r[j] ?? null; });
+    headers.forEach((h, j) => {
+      // Per duplicati, usa suffisso _2, _3...
+      const occurrences = headers.slice(0, j).filter(x => x === h).length;
+      const key = occurrences === 0 ? h : `${h}_${occurrences + 1}`;
+      obj[key] = r[j] ?? null;
+    });
     rows.push(obj);
   }
 
-  return { meta, headers, rows, isGeneri };
+  return { meta, headers, colIndex, rows, isGeneri };
 }
 
 // ── DETECT TYPE ──────────────────────────────────────────────
@@ -347,34 +359,24 @@ function detectType({ meta, headers, isGeneri }) {
   const hasCompare = !!meta['Compare period'];
   const hasTitle   = headers.includes('Title');
 
-  console.log('[detectType]', {
-    period, publisher, hasCompare, hasTitle, isGeneri,
-    headers: headers.slice(0,5)
-  });
-
-  // 1. GENERI: header inizia con ID (colonna generi)
+  // 1. GENERI: header inizia con ID
   if (isGeneri || hasCompare) {
-    const t = publisher === 'All' ? 'generiMercato' : 'generiPDE';
-    console.log('  → ', t);
-    return t;
+    return publisher === 'All' ? 'generiMercato' : 'generiPDE';
   }
 
   // 2. TOP 20: hanno colonna Title
   if (hasTitle) {
-    const t = period.includes(' - ') ? 'top20tot' : 'top20week';
-    console.log('  → ', t);
-    return t;
+    // top20week = periodo singola settimana (no " - " nel period, es. "CW 22 2026")
+    // top20tot  = periodo cumulativo (es. "CW 01 2026 - CW 22 2026")
+    return period.includes(' - ') ? 'top20tot' : 'top20week';
   }
 
   // 3. GFK PUBLISHER: hanno Publisher, no Title
   if (headers.includes('Publisher')) {
     const years = [...new Set((period.match(/\d{4}/g) || []))];
-    const t = years.every(y => y === '2025') ? 'gfk2025' : 'gfk2026';
-    console.log('  → ', t, 'years:', years);
-    return t;
+    return years.every(y => y === '2025') ? 'gfk2025' : 'gfk2026';
   }
 
-  console.log('  → NULL (non riconosciuto)');
   return null;
 }
 
@@ -527,79 +529,106 @@ function normalizeWeekKey(period) {
 // ── AGGREGAZIONI ─────────────────────────────────────────────
 function aggPerPromo(rows26, rows25, quadratura) {
   const agg = {};
-  const isTotal = r => !r['Publisher'] || String(r['Publisher']).toLowerCase()==='total' || String(r['Rank']).toLowerCase()==='total';
+  // Riga totale: Publisher è null oppure stringa 'Total'
+  const isTotal = r => {
+    const pub = r['Publisher'];
+    const rank = r['Rank'];
+    if (pub == null) return true;
+    if (String(pub).toLowerCase() === 'total') return true;
+    if (rank != null && String(rank).toLowerCase() === 'total') return true;
+    return false;
+  };
+
   const set26 = new Set(rows26.filter(r=>!isTotal(r)).map(r=>r['Publisher']));
   const set25 = new Set(rows25.filter(r=>!isTotal(r)).map(r=>r['Publisher']));
-  // Parità: solo editori presenti in entrambi gli anni
-  // Quadratura: 2026 usa tutti, 2025 usa solo quelli presenti nel 2026 (perimetro 2026)
-  const perimetro26 = set26; // per quadratura: tutti i 2026
-  const comuni = new Set([...set26].filter(e=>set25.has(e))); // per parità: intersezione
+  const comuni = new Set([...set26].filter(e=>set25.has(e)));
 
-  const filtro26 = quadratura ? perimetro26 : comuni;
-  const filtro25 = quadratura ? perimetro26 : comuni; // quadratura: 2025 usa stesso perimetro 2026
+  const filtro26 = quadratura ? set26 : comuni;
+  const filtro25 = quadratura ? set26 : comuni;
 
   rows26.filter(r=>!isTotal(r)&&filtro26.has(r['Publisher'])).forEach(r=>{
     const p = dbPromo[r['Publisher']] || 'ALTRO';
     if (!agg[p]) agg[p]={v26:0,u26:0,v25:0,u25:0};
-    agg[p].v26 += parseFloat(r['Value'])||0;
-    agg[p].u26 += parseFloat(r['Units'])||0;
+    agg[p].v26 += Number(r['Value'])||0;
+    agg[p].u26 += Number(r['Units'])||0;
   });
   rows25.filter(r=>!isTotal(r)&&filtro25.has(r['Publisher'])).forEach(r=>{
     const p = dbPromo[r['Publisher']] || 'ALTRO';
     if (!agg[p]) agg[p]={v26:0,u26:0,v25:0,u25:0};
-    agg[p].v25 += parseFloat(r['Value'])||0;
-    agg[p].u25 += parseFloat(r['Units'])||0;
+    agg[p].v25 += Number(r['Value'])||0;
+    agg[p].u25 += Number(r['Units'])||0;
   });
   return agg;
 }
 
 function parseGeneri(rows, tipo, weekKey) {
+  // Struttura generi: ID, Genre, Value26, Value%26, Units26, Units%26, Ø-Price26,
+  //                   Value25, Value%25, Units25, Units%25, Ø-Price25,
+  //                   _, DeltaValue, _, DeltaUnits
   return rows
     .filter(r => {
-      const id = String(r['ID']||r['_c0']||'').toLowerCase();
-      const genre = r['Genre']||r['_c1']||'';
-      return genre && id !== 'total' && id !== 'id';
+      const id = String(r['ID'] ?? r['_c0'] ?? '').toLowerCase();
+      const genre = r['Genre'] ?? r['_c1'];
+      return genre && id !== 'total' && id !== 'id' && id !== '';
     })
     .map(r => {
       const ks = Object.keys(r);
+      const n = k => Number(r[k]) || 0;
       return {
-        week_key:weekKey, tipo,
-        genre_id: String(r[ks[0]]||''),
-        genre: String(r[ks[1]]||''),
-        value_26:    parseFloat(r[ks[2]])||0,
-        value_pct_26:parseFloat(r[ks[3]])||0,
-        units_26:    parseFloat(r[ks[4]])||0,
-        pm_26:       parseFloat(r[ks[6]])||0,
-        value_25:    parseFloat(r[ks[7]])||0,
-        value_pct_25:parseFloat(r[ks[8]])||0,
-        units_25:    parseFloat(r[ks[9]])||0,
-        pm_25:       parseFloat(r[ks[11]])||0,
-        delta_value: parseFloat(r[ks[13]])||0,
-        delta_units: parseFloat(r[ks[15]])||0,
+        week_key:     weekKey, tipo,
+        genre_id:     String(r[ks[0]] || ''),
+        genre:        String(r[ks[1]] || ''),
+        value_26:     n(ks[2]),
+        value_pct_26: n(ks[3]),
+        units_26:     n(ks[4]),
+        pm_26:        n(ks[6]),
+        value_25:     n(ks[7]),
+        value_pct_25: n(ks[8]),
+        units_25:     n(ks[9]),
+        pm_25:        n(ks[11]),
+        delta_value:  n(ks[13]),
+        delta_units:  n(ks[15]),
       };
     });
 }
 
 function parseTop20(rows, tipo, weekKey) {
+  // Struttura Top20: ha colonne duplicate (Rank, Value, Units, Value %, Units %, Ø-Price)
+  // Le colonne della settimana/periodo sono le SECONDE occorrenze (suffisso _2)
+  // Le prime sono "since release" / cumulative
+  // Colonne uniche: Title, Author, Publisher, ISBN/EAN, Cover price, Genre level 1, ecc.
   return rows
-    .filter(r => r['Rank'] && !isNaN(parseInt(r['Rank'])))
-    .slice(0,20)
-    .map(r => ({
-      week_key:weekKey, tipo,
-      rank_pos:parseInt(r['Rank']),
-      title:r['Title']||'',
-      author:r['Author']||'',
-      publisher:r['Publisher']||'',
-      promozione:dbPromo[r['Publisher']]||'ALTRO',
-      ean:String(r['ISBN / EAN']||''),
-      cover_price:parseFloat(r['Cover price'])||0,
-      genre:r['Genre level 1']||r['Genre']||'',
-      value:parseFloat(r['Value'])||0,
-      value_pct:parseFloat(r['Value %'])||0,
-      units:parseInt(r['Units'])||0,
-      units_pct:parseFloat(r['Units %'])||0,
-      pm:parseFloat(r['Ø-Price'])||0,
-    }));
+    .filter(r => {
+      // Riga valida: il primo Rank è un numero
+      const rk = r['Rank'];
+      return rk != null && !isNaN(Number(rk)) && String(rk).toLowerCase() !== 'total';
+    })
+    .slice(0, 20)
+    .map(r => {
+      // Value e Units della settimana: usa la seconda occorrenza se esiste, altrimenti la prima
+      const value   = Number(r['Value_2']   ?? r['Value'])   || 0;
+      const valuePct= Number(r['Value %_2'] ?? r['Value %']) || 0;
+      const units   = Number(r['Units_2']   ?? r['Units'])   || 0;
+      const unitsPct= Number(r['Units %_2'] ?? r['Units %']) || 0;
+      const pm      = Number(r['Ø-Price_2'] ?? r['Ø-Price']) || 0;
+      // Rank di mercato: seconda occorrenza se esiste
+      const rankMkt = Number(r['Rank_2'] ?? r['Rank']) || 0;
+
+      return {
+        week_key: weekKey, tipo,
+        rank_pos:   rankMkt,
+        title:      r['Title']    || '',
+        author:     r['Author']   || '',
+        publisher:  r['Publisher']|| '',
+        promozione: dbPromo[r['Publisher']] || 'ALTRO',
+        ean:        String(r['ISBN / EAN'] || ''),
+        cover_price:Number(r['Cover price'])|| 0,
+        genre:      r['Genre level 1'] || r['Genre'] || '',
+        value, value_pct: valuePct,
+        units, units_pct: unitsPct,
+        pm,
+      };
+    });
 }
 
 // ── DB PROMO ─────────────────────────────────────────────────
