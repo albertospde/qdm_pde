@@ -26,28 +26,17 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14
 .week-select:focus{outline:none;border-color:var(--accent);}
 .badge{font-family:var(--mono);font-size:11px;padding:3px 8px;border-radius:4px;background:rgba(0,180,232,.1);border:1px solid rgba(0,180,232,.2);color:var(--accent);}
 
-.upload-zone{padding:20px 24px;border-bottom:1px solid var(--border);background:var(--surface);}
-.drop-area{border:2px dashed var(--border);border-radius:10px;padding:26px;text-align:center;transition:.15s;cursor:pointer;position:relative;}
-.drop-area:hover,.drop-area.drag-over{border-color:var(--accent);background:rgba(0,180,232,.04);}
-.drop-area input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;}
-.drop-icon{font-size:30px;margin-bottom:6px;}
-.drop-title{font-size:14px;font-weight:600;margin-bottom:3px;}
-.drop-sub{font-size:12px;color:var(--text3);}
-.files-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-top:14px;}
-.fpill{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:8px 10px;font-size:11px;display:flex;align-items:center;gap:6px;}
-.fpill.ok{border-color:var(--green);background:rgba(34,197,94,.06);}
-.fpill.err{border-color:var(--red);}
-.fpill-ico{font-size:14px;}
-.fpill-info{flex:1;min-width:0;}
-.fpill-type{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:var(--text3);}
-.fpill-name{font-size:10px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-
-.progress-wrap{margin-top:10px;display:none;}
-.progress-bar{height:3px;background:var(--border);border-radius:2px;overflow:hidden;}
-.progress-fill{height:100%;background:var(--accent);width:0;transition:width .3s;}
-.progress-label{font-size:11px;color:var(--text3);margin-top:4px;}
-
-.upload-actions{display:flex;align-items:center;gap:10px;margin-top:14px;}
+/* upload inline — nascosto fisicamente, gestito dall'header */
+.upload-inline{display:flex;align-items:center;gap:8px;position:relative;}
+.upload-file-btn{background:var(--surface2);border:1px solid var(--border);color:var(--text2);padding:5px 11px;border-radius:6px;font-size:12px;font-family:var(--sans);cursor:pointer;transition:.15s;display:flex;align-items:center;gap:5px;white-space:nowrap;}
+.upload-file-btn:hover{border-color:var(--accent);color:var(--accent);}
+.upload-file-btn input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;}
+.upload-pills{display:flex;gap:4px;flex-wrap:wrap;max-width:340px;}
+.fpill{background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:2px 6px;font-size:10px;display:flex;align-items:center;gap:3px;white-space:nowrap;}
+.fpill.ok{border-color:var(--green);color:var(--green);}
+.fpill.err{border-color:var(--red);color:var(--red);}
+.upload-progress{height:2px;background:var(--border);border-radius:1px;overflow:hidden;width:80px;display:none;}
+.upload-progress-fill{height:100%;background:var(--accent);width:0;transition:width .3s;}
 .btn{display:inline-flex;align-items:center;gap:6px;padding:7px 16px;border-radius:6px;border:none;cursor:pointer;font-family:var(--sans);font-size:13px;font-weight:500;transition:.15s;}
 .btn-primary{background:var(--accent);color:#000;}
 .btn-primary:hover{background:#00c8ff;}
@@ -168,30 +157,23 @@ table tr:last-child td{border-bottom:none;}
   <div style="background:#fff;border-radius:6px;padding:3px 8px;display:flex;align-items:center;"><img src="data:image/png;base64,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8j/j2/cT2HOyH4eR/wAe37isSiAj7YzsgxLZPDdIcVdcSy5uidP4XOJOMYcG7ujRp7s/QpBREBrW0nDrdm2MzWiu9rlHj0tQBq6CQDg7vHUR1jsOhFMr7a7pjV+qLZXxyUtdSSFrt0keRzT1gjiD1gq+SjDb3s4bmNl9c7XC319ome1dXhEY1JiPfxJae3Udeo6+y77sJdnPuv8AozXFHWtS4lcLRtBza07oosoujWt9yyScysH7r9R9C3C0bfc7o90VfrbcW9Zmp9xx87C0fQoqe1zHuY9pa5p0II0IPYvK+jnaUKnegvoYFUnHgyw9n5R9Od1t3xiVnwpKWpDtf3XAf5rcLRt02fV2gnray3OPVU0rv82bwVSEWOex7aXBNej/AHktV1URdn152eZbEIZLhj12DhoIpnxPd813EehYK+7Etn90DnxW6e2yO9/Rzlvoa7eb6AqhrJ2nIL7aCDarzcKHTqp6l7B6AVQtlVKfuarXXXIn/JjLvRJrvvJxqGhz7HksTz72KsgLf8bSfqrX6DCtsmz+pNTY4ql8Our20UzZopPLEeJ8u75CsJads+0O36NN7FYwe9qoGP8A8Wgd9K3C0co28xkC7Y7QVI6zTSvhPodvr1w2hFaZKM116HidFvKyjYMe25iF/rVtDxyot0rxuvlZA7cI6DvxP8YDt03vIs7S4VjF3qxlmzC/w2i4t90aMh9NJrx3JYfeg6dHDTp01WLpdvWDXaDwW+2SuiY73TZYGVEX+ev+Ff3t9RsQudcy4We7Udjr9fFmpZ5Le5vdod1unlBBWGdOVPLVOUPTen6ovUlLjJP+mbc1k96dSU+T271nyCifv0VfTO34XP00Jik+C4cHRP0JGvAgby2ulhdvConjjbVGMRymP3LwCSO/TidOzeK+LH959Loy+RXmm6GyuDC/zuj0afmjyrLLlVJZeDRFGKy2tjteKXWve4RspqKWTXs0YdFB/I+otZsiuLmdDYIWO8u+5w+hq+3lNZ9B4CcHs8wnqp3t8PMZ15sAgiLh74nQkdQGnWpA2IYm/EMBpaKqZuV9S41VWOtr3AaN8zQ0eUFdBRdCylq4zax6IozrqrHI3hERco0hERAEREAREQBERAEREAREQBERAEREAREQBERAEREB4MURJJiYSek7oTmYf0UfzQvaJkHjmYf0UfzQnMw/oo/mhe0TIPHMw/oo/mhOZh/RR/NC9omQeOZh/RR/NCczD+ij+aF7RMg8czD+ij+aE5mH9FH80L2iZB8twljoLfU1jYWnmIXybo4b26CdNfMq5XHa5tEzcutWJWN1GJfFLqRrpZWg9Osh0a0d+g07VZdeYoo4mBkUbI2joDRoFqtq9OjlyhqfLPL5FdSDlweCGdj2xk2SujyLLZGVV0a7nIaZrt9kLvhPd75/0Dp48NJoRFCvcVK89U2ewgoLCCIioJhERAEX5p4wdqeAI014L9QBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAf//Z" style="height:28px;display:block;"></div>
   <div class="hdr-title">QDM — Quote di Mercato GFK</div>
   <div class="hdr-right">
+    <!-- upload compatto inline -->
+    <div class="upload-inline" id="uploadInline">
+      <div class="upload-file-btn" title="Carica i 6 file GFK">
+        <input type="file" multiple accept=".xlsx,.xls" id="fileInput" onchange="handleFiles(this.files)">
+        📂 Carica file GFK
+      </div>
+      <div class="upload-pills" id="filesGrid"></div>
+      <div class="upload-progress" id="progressWrap"><div class="upload-progress-fill" id="progressFill"></div></div>
+      <span id="statusTxt" style="font-size:11px;color:var(--text3);white-space:nowrap"></span>
+      <button class="btn btn-primary" id="btnElabora" onclick="elabora()" disabled style="padding:5px 12px;font-size:12px">Elabora</button>
+      <button class="btn btn-ghost" onclick="resetUpload()" style="padding:5px 10px;font-size:12px">↺</button>
+    </div>
     <select class="week-select" id="weekSelect" onchange="loadWeek(this.value)" style="display:none">
       <option value="">— Seleziona settimana —</option>
     </select>
     <span class="badge" id="weekBadge" style="display:none"></span>
     <button class="logout-btn" id="logoutBtn" style="display:none" onclick="doLogout()">Esci</button>
-  </div>
-</div>
-
-<div class="upload-zone" id="uploadZone">
-  <div class="drop-area" id="dropArea">
-    <input type="file" multiple accept=".xlsx,.xls" id="fileInput" onchange="handleFiles(this.files)">
-    <div class="drop-icon">📂</div>
-    <div class="drop-title">Trascina i 6 file GFK oppure clicca per selezionarli</div>
-    <div class="drop-sub">Vengono riconosciuti automaticamente — puoi caricarli tutti insieme</div>
-  </div>
-  <div class="files-grid" id="filesGrid" style="display:none"></div>
-  <div class="progress-wrap" id="progressWrap">
-    <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
-    <div class="progress-label" id="progressLabel"></div>
-  </div>
-  <div class="upload-actions">
-    <button class="btn btn-primary" id="btnElabora" onclick="elabora()" disabled>Elabora e salva</button>
-    <button class="btn btn-ghost" onclick="resetUpload()">Reset</button>
-    <span class="status-txt" id="statusTxt">Carica i 6 file GFK per procedere</span>
   </div>
 </div>
 
@@ -269,11 +251,7 @@ let currentWeekKey = null;
 let currentData = {};
 let activeTab = 'recap';
 
-// ── DRAG & DROP ──────────────────────────────────────────────
-const dropArea = document.getElementById('dropArea');
-dropArea.addEventListener('dragover', e=>{e.preventDefault();dropArea.classList.add('drag-over');});
-dropArea.addEventListener('dragleave', ()=>dropArea.classList.remove('drag-over'));
-dropArea.addEventListener('drop', e=>{e.preventDefault();dropArea.classList.remove('drag-over');handleFiles(e.dataTransfer.files);});
+// ── DRAG & DROP — supportato direttamente sul file input ──────────────────────────────────────────
 
 async function handleFiles(fileList) {
   const files = Array.from(fileList);
@@ -396,40 +374,32 @@ function detectType({ meta, headers, isGeneri }) {
 
 function renderFilePills() {
   const grid = document.getElementById('filesGrid');
-  grid.style.display = 'grid';
-  grid.innerHTML = ALL_TYPES.map(type => {
-    const r = recognized[type];
-    const {icon, label} = TYPE_LABELS[type];
-    if (r) return `<div class="fpill ok">
-      <span class="fpill-ico">${icon}</span>
-      <div class="fpill-info">
-        <div class="fpill-type">${label} ✓</div>
-        <div class="fpill-name">${r.file.name}</div>
-      </div></div>`;
-    return `<div class="fpill">
-      <span class="fpill-ico">⬜</span>
-      <div class="fpill-info">
-        <div class="fpill-type">${label}</div>
-        <div class="fpill-name" style="color:var(--text3)">In attesa...</div>
-      </div></div>`;
+  const loaded = ALL_TYPES.filter(t=>recognized[t]);
+  const missing = ALL_TYPES.filter(t=>!recognized[t]);
+  if (!loaded.length) { grid.innerHTML=''; return; }
+  grid.innerHTML = loaded.map(type => {
+    const {label} = TYPE_LABELS[type];
+    const short = label.replace('DATI GFK ','GFK ').replace('GENERI ','').replace('TOP 20 ','T20 ');
+    return `<div class="fpill ok">✓ ${short}</div>`;
+  }).join('') + missing.map(type => {
+    const {label} = TYPE_LABELS[type];
+    const short = label.replace('DATI GFK ','GFK ').replace('GENERI ','').replace('TOP 20 ','T20 ');
+    return `<div class="fpill">⬜ ${short}</div>`;
   }).join('');
 }
 
 function checkReady() {
   const loaded = ALL_TYPES.filter(t=>recognized[t]).length;
   document.getElementById('btnElabora').disabled = loaded < 6;
-  document.getElementById('statusTxt').textContent = loaded === 6
-    ? 'Tutti e 6 i file riconosciuti ✓'
-    : `${loaded}/6 file riconosciuti`;
+  document.getElementById('statusTxt').textContent = loaded === 0 ? '' : loaded === 6 ? '✓ tutti' : `${loaded}/6`;
 }
 
 function resetUpload() {
   recognized = {};
-  document.getElementById('filesGrid').style.display = 'none';
   document.getElementById('filesGrid').innerHTML = '';
   document.getElementById('progressWrap').style.display = 'none';
   document.getElementById('btnElabora').disabled = true;
-  document.getElementById('statusTxt').textContent = 'Carica i 6 file GFK per procedere';
+  document.getElementById('statusTxt').textContent = '';
   document.getElementById('fileInput').value = '';
 }
 
@@ -554,15 +524,21 @@ function aggPerPromo(rows26, rows25, quadratura) {
   const isTotal = r => !r['Publisher'] || String(r['Publisher']).toLowerCase()==='total' || String(r['Rank']).toLowerCase()==='total';
   const set26 = new Set(rows26.filter(r=>!isTotal(r)).map(r=>r['Publisher']));
   const set25 = new Set(rows25.filter(r=>!isTotal(r)).map(r=>r['Publisher']));
-  const comuni = quadratura ? set26 : new Set([...set26].filter(e=>set25.has(e)));
+  // Parità: solo editori presenti in entrambi gli anni
+  // Quadratura: 2026 usa tutti, 2025 usa solo quelli presenti nel 2026 (perimetro 2026)
+  const perimetro26 = set26; // per quadratura: tutti i 2026
+  const comuni = new Set([...set26].filter(e=>set25.has(e))); // per parità: intersezione
 
-  rows26.filter(r=>!isTotal(r)&&comuni.has(r['Publisher'])).forEach(r=>{
+  const filtro26 = quadratura ? perimetro26 : comuni;
+  const filtro25 = quadratura ? perimetro26 : comuni; // quadratura: 2025 usa stesso perimetro 2026
+
+  rows26.filter(r=>!isTotal(r)&&filtro26.has(r['Publisher'])).forEach(r=>{
     const p = dbPromo[r['Publisher']] || 'ALTRO';
     if (!agg[p]) agg[p]={v26:0,u26:0,v25:0,u25:0};
     agg[p].v26 += parseFloat(r['Value'])||0;
     agg[p].u26 += parseFloat(r['Units'])||0;
   });
-  rows25.filter(r=>!isTotal(r)&&comuni.has(r['Publisher'])).forEach(r=>{
+  rows25.filter(r=>!isTotal(r)&&filtro25.has(r['Publisher'])).forEach(r=>{
     const p = dbPromo[r['Publisher']] || 'ALTRO';
     if (!agg[p]) agg[p]={v26:0,u26:0,v25:0,u25:0};
     agg[p].v25 += parseFloat(r['Value'])||0;
@@ -729,20 +705,20 @@ function buildRecap() {
   return `
   <div class="metrics-row">
     <div class="mc"><div class="mc-lbl">Value 2026</div>
-      <div class="mc-val">${fmtM(totV26)}</div>
+      <div class="mc-val">${fmtEurFull(totV26)}</div>
       <div class="mc-delta ${delta(totV26,totV25)>=0?'pos':'neg'}">${fmtPct(delta(totV26,totV25))} vs 2025</div>
-      <div class="mc-sub">2025: ${fmtM(totV25)}</div></div>
+      <div class="mc-sub">2025: ${fmtEurFull(totV25)}</div></div>
     <div class="mc"><div class="mc-lbl">Units 2026</div>
-      <div class="mc-val">${fmtK(totU26)}</div>
+      <div class="mc-val">${fmtInt(totU26)}</div>
       <div class="mc-delta ${delta(totU26,totU25)>=0?'pos':'neg'}">${fmtPct(delta(totU26,totU25))} vs 2025</div>
-      <div class="mc-sub">2025: ${fmtK(totU25)}</div></div>
+      <div class="mc-sub">2025: ${fmtInt(totU25)}</div></div>
     <div class="mc"><div class="mc-lbl">Prezzo Medio 2026</div>
       <div class="mc-val">${fmtEur(pm26)}</div>
       <div class="mc-delta ${delta(pm26,pm25)>=0?'pos':'neg'}">${fmtPct(delta(pm26,pm25))} vs 2025</div>
       <div class="mc-sub">2025: ${fmtEur(pm25)}</div></div>
   </div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px">
-    <div class="blk"><div class="blk-hdr"><span class="blk-title">PM per Gruppo — 2026 vs 2025</span></div>
+    <div class="blk"><div class="blk-hdr"><span class="blk-title">PREZZO MEDIO PER GRUPPO — 2026 vs 2025</span></div>
       <div class="tbl-wrap"><table>
         <thead><tr><th class="l">Gruppo</th><th>PM 2026</th><th>PM 2025</th><th>Δ%</th></tr></thead>
         <tbody>${gruppiRows.map(({g,pm26,pm25})=>`<tr>
@@ -771,8 +747,8 @@ function buildRecap() {
       </thead>
       <tbody>
         <tr class="tot"><td class="l">Totale</td>
-          <td>${fmtM(totV26)}</td><td>${fmtK(totU26)}</td><td>${fmtEur(pm26)}</td><td>100,0%</td>
-          <td>${fmtM(totV25)}</td><td>${fmtK(totU25)}</td><td>${fmtEur(pm25)}</td><td>100,0%</td>
+          <td>${fmtEurFull(totV26)}</td><td>${fmtInt(totU26)}</td><td>${fmtEur(pm26)}</td><td>100,0%</td>
+          <td>${fmtEurFull(totV25)}</td><td>${fmtInt(totU25)}</td><td>${fmtEur(pm25)}</td><td>100,0%</td>
           <td class="${delta(totV26,totV25)>=0?'pos':'neg'}">${fmtPct(delta(totV26,totV25))}</td>
           <td class="${delta(totU26,totU25)>=0?'pos':'neg'}">${fmtPct(delta(totU26,totU25))}</td>
           <td class="${delta(pm26,pm25)>=0?'pos':'neg'}">${fmtPct(delta(pm26,pm25))}</td></tr>
@@ -780,8 +756,8 @@ function buildRecap() {
           const pm26r=r.units_26?r.value_26/r.units_26:0;
           const pm25r=r.units_25p?r.value_25p/r.units_25p:0;
           return `<tr><td class="l">${r.promozione}</td>
-            <td>${fmtM(r.value_26)}</td><td>${fmtK(r.units_26)}</td><td>${fmtEur(pm26r)}</td><td>${fmtPct2(r.qdm_value_26)}</td>
-            <td>${fmtM(r.value_25p)}</td><td>${fmtK(r.units_25p)}</td><td>${fmtEur(pm25r)}</td><td>${fmtPct2(r.qdm_value_25p)}</td>
+            <td>${fmtEurFull(r.value_26)}</td><td>${fmtInt(r.units_26)}</td><td>${fmtEur(pm26r)}</td><td>${fmtPct2(r.qdm_value_26)}</td>
+            <td>${fmtEurFull(r.value_25p)}</td><td>${fmtInt(r.units_25p)}</td><td>${fmtEur(pm25r)}</td><td>${fmtPct2(r.qdm_value_25p)}</td>
             <td class="${r.value_25p?delta(r.value_26,r.value_25p)>=0?'pos':'neg':''}">${r.value_25p?fmtPct(delta(r.value_26,r.value_25p)):'—'}</td>
             <td class="${r.units_25p?delta(r.units_26,r.units_25p)>=0?'pos':'neg':''}">${r.units_25p?fmtPct(delta(r.units_26,r.units_25p)):'—'}</td>
             <td class="${pm25r?delta(pm26r,pm25r)>=0?'pos':'neg':''}">${pm25r?fmtPct(delta(pm26r,pm25r)):'—'}</td>
@@ -817,11 +793,11 @@ function buildTabellone(isQuad) {
       </thead>
       <tbody>
         <tr class="tot"><td class="l">Totale</td>
-          <td>${fmtM(totV26)}</td><td>${fmtK(totU26)}</td><td>${fmtEur(totPM26)}</td><td>100,0%</td><td>100,0%</td>
+          <td>${fmtEurFull(totV26)}</td><td>${fmtInt(totU26)}</td><td>${fmtEur(totPM26)}</td><td>100,0%</td><td>100,0%</td>
           <td class="${delta(totV26,totV25)>=0?'pos':'neg'}">${fmtPct(delta(totV26,totV25))}</td>
           <td class="${delta(totU26,totU25)>=0?'pos':'neg'}">${fmtPct(delta(totU26,totU25))}</td>
           <td class="${delta(totPM26,totPM25)>=0?'pos':'neg'}">${fmtPct(delta(totPM26,totPM25))}</td>
-          <td>${fmtM(totV25)}</td><td>${fmtK(totU25)}</td><td>${fmtEur(totPM25)}</td><td>100,0%</td><td>100,0%</td>
+          <td>${fmtEurFull(totV25)}</td><td>${fmtInt(totU25)}</td><td>${fmtEur(totPM25)}</td><td>100,0%</td><td>100,0%</td>
         </tr>
         ${all.map(r=>{
           const v26=v26f(r),u26=u26f(r),v25=v25f(r),u25=u25f(r);
@@ -829,12 +805,12 @@ function buildTabellone(isQuad) {
           const qv26=totV26?v26/totV26:0, qu26=totU26?u26/totU26:0;
           const qv25=totV25?v25/totV25:0, qu25=totU25?u25/totU25:0;
           return `<tr><td class="l">${r.promozione}</td>
-            <td>${fmtM(v26)}</td><td>${fmtK(u26)}</td><td>${fmtEur(pm26)}</td>
+            <td>${fmtEurFull(v26)}</td><td>${fmtInt(u26)}</td><td>${fmtEur(pm26)}</td>
             <td>${fmtPct2(qv26)}</td><td>${fmtPct2(qu26)}</td>
             <td class="${v25?delta(v26,v25)>=0?'pos':'neg':''}">${v25?fmtPct(delta(v26,v25)):'—'}</td>
             <td class="${u25?delta(u26,u25)>=0?'pos':'neg':''}">${u25?fmtPct(delta(u26,u25)):'—'}</td>
             <td class="${pm25?delta(pm26,pm25)>=0?'pos':'neg':''}">${pm25?fmtPct(delta(pm26,pm25)):'—'}</td>
-            <td>${fmtM(v25)}</td><td>${fmtK(u25)}</td><td>${fmtEur(pm25)}</td>
+            <td>${fmtEurFull(v25)}</td><td>${fmtInt(u25)}</td><td>${fmtEur(pm25)}</td>
             <td>${fmtPct2(qv25)}</td><td>${fmtPct2(qu25)}</td>
           </tr>`;}).join('')}
       </tbody>
@@ -868,8 +844,10 @@ function buildGeneri() {
 
 // ── TOP 20 ───────────────────────────────────────────────────
 function buildTop20() {
-  const week=currentData.top20.filter(r=>r.tipo==='WEEK').sort((a,b)=>a.rank_pos-b.rank_pos);
-  const tot=currentData.top20.filter(r=>r.tipo==='TOTALE').sort((a,b)=>a.rank_pos-b.rank_pos);
+  // Filtra solo titoli PDE (promozione diversa da ALTRO e riconosciuta come PDE)
+  const PDE_PROMOS = new Set(['PDE SERVIZI COMM. PER EDITORIA','PDE SERVICE']);
+  const week=currentData.top20.filter(r=>r.tipo==='WEEK'&&PDE_PROMOS.has(r.promozione)).sort((a,b)=>a.rank_pos-b.rank_pos);
+  const tot=currentData.top20.filter(r=>r.tipo==='TOTALE'&&PDE_PROMOS.has(r.promozione)).sort((a,b)=>a.rank_pos-b.rank_pos);
   function rb(n){
     if(n===1) return `<span class="rank-b g">#1</span>`;
     if(n===2) return `<span class="rank-b s">#2</span>`;
@@ -877,38 +855,50 @@ function buildTop20() {
     return `<span class="rank-b">#${n}</span>`;
   }
   function t20(rows,titolo){
-    return `<div class="blk" style="margin-bottom:20px">
-      <div class="blk-hdr"><span class="blk-title">${titolo}</span></div>
+    if(!rows.length) return `<div class="blk"><div class="blk-hdr"><span class="blk-title">${titolo}</span></div><div style="padding:20px;text-align:center;color:var(--text3);font-size:12px">Nessun titolo PDE in classifica</div></div>`;
+    return `<div class="blk" style="margin-bottom:0">
+      <div class="blk-hdr"><span class="blk-title">${titolo}</span><span style="font-size:10px;color:var(--text3)">${rows.length} titoli PDE</span></div>
       <div class="tbl-wrap"><table>
         <thead><tr>
-          <th>#</th><th class="l">Titolo</th><th class="l">Autore</th>
-          <th class="l">Editore</th><th class="l">Promozione</th><th class="l">Genere</th>
-          <th>Value</th><th>Val%</th><th>Units</th><th>PM</th>
+          <th>#Mkt</th><th class="l">Titolo</th><th class="l">Autore</th>
+          <th class="l">Editore</th><th class="l">Genere</th>
+          <th>Value €</th><th>Val%</th><th>Units</th><th>PM</th>
         </tr></thead>
         <tbody>${rows.map(r=>`<tr>
           <td>${rb(r.rank_pos)}</td>
-          <td class="l" style="max-width:200px;white-space:normal;line-height:1.3">${r.title||'—'}</td>
-          <td class="l">${r.author||'—'}</td>
-          <td class="l">${r.publisher||'—'}</td>
-          <td class="l dim">${r.promozione||'—'}</td>
+          <td class="l" style="max-width:180px;white-space:normal;line-height:1.3">${r.title||'—'}</td>
+          <td class="l" style="max-width:120px;white-space:normal">${r.author||'—'}</td>
+          <td class="l dim">${r.publisher||'—'}</td>
           <td class="l dim">${r.genre||'—'}</td>
-          <td>${fmtM(r.value)}</td><td>${fmtPct2(r.value_pct)}</td>
-          <td>${fmtK(r.units)}</td><td>${fmtEur(r.pm)}</td>
+          <td>${r.value?'€'+Math.round(r.value).toLocaleString('it-IT'):'—'}</td>
+          <td>${fmtPct2(r.value_pct)}</td>
+          <td>${r.units?Math.round(r.units).toLocaleString('it-IT'):'—'}</td>
+          <td>${fmtEur(r.pm)}</td>
         </tr>`).join('')}</tbody>
       </table></div></div>`;
   }
-  return t20(week,'TOP 20 — SETTIMANA CORRENTE') + t20(tot,'TOP 20 — PROGRESSIVO');
+  return `<div class="two-col">${t20(week,'TOP 20 SETTIMANA — Titoli PDE')}${t20(tot,'TOP 20 PROGRESSIVO — Titoli PDE')}</div>`;
 }
 
 // ── UTILS ────────────────────────────────────────────────────
 const delta=(a,b)=>b?a/b-1:0;
 const fmtM=v=>{if(!v&&v!==0)return'—';if(Math.abs(v)>=1e6)return(v/1e6).toLocaleString('it-IT',{minimumFractionDigits:1,maximumFractionDigits:1})+'M';if(Math.abs(v)>=1e3)return(v/1e3).toLocaleString('it-IT',{minimumFractionDigits:0,maximumFractionDigits:0})+'K';return v.toLocaleString('it-IT');};
 const fmtK=v=>{if(!v&&v!==0)return'—';if(Math.abs(v)>=1e6)return(v/1e6).toLocaleString('it-IT',{minimumFractionDigits:2,maximumFractionDigits:2})+'M';if(Math.abs(v)>=1e3)return(v/1e3).toLocaleString('it-IT',{minimumFractionDigits:1,maximumFractionDigits:1})+'K';return v.toLocaleString('it-IT');};
+// Valori interi con simbolo euro (nessun K/M)
+const fmtEurFull=v=>{if(!v&&v!==0)return'—';return'€'+Math.round(v).toLocaleString('it-IT');};
+const fmtInt=v=>{if(!v&&v!==0)return'—';return Math.round(v).toLocaleString('it-IT');};
 const fmtEur=v=>v?'€'+v.toLocaleString('it-IT',{minimumFractionDigits:2,maximumFractionDigits:2}):'—';
 const fmtPct=v=>{if(v==null||isNaN(v))return'—';const s=(v*100).toLocaleString('it-IT',{minimumFractionDigits:1,maximumFractionDigits:1});return(v>=0?'+':'')+s+'%';};
 const fmtPct2=v=>{if(v==null||isNaN(v))return'—';return(v*100).toLocaleString('it-IT',{minimumFractionDigits:1,maximumFractionDigits:1})+'%';};
-function setProgress(pct,label){document.getElementById('progressWrap').style.display='block';document.getElementById('progressFill').style.width=pct+'%';document.getElementById('progressLabel').textContent=label;}
-function hideProgress(){document.getElementById('progressWrap').style.display='none';}
+function setProgress(pct,label){
+  document.getElementById('progressWrap').style.display='block';
+  document.getElementById('progressFill').style.width=pct+'%';
+  document.getElementById('statusTxt').textContent=label;
+}
+function hideProgress(){
+  document.getElementById('progressWrap').style.display='none';
+  document.getElementById('statusTxt').textContent='';
+}
 function toast(msg,type='ok'){const t=document.createElement('div');t.className=`toast ${type}`;t.textContent=msg;document.getElementById('toasts').appendChild(t);setTimeout(()=>t.remove(),3500);}
 
 
