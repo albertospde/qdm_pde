@@ -127,6 +127,85 @@ table th.sort-desc::after{content:' ▼';color:var(--accent);font-size:9px;}
 .btn-login{width:100%;padding:10px;font-size:14px;font-weight:600;}
 .logout-btn{background:none;border:1px solid var(--border);color:var(--text3);padding:4px 10px;border-radius:5px;font-size:11px;cursor:pointer;font-family:var(--sans);transition:.15s;}
 .logout-btn:hover{border-color:var(--red);color:var(--red);}
+
+/* ── MOBILE (≤ 768px) ───────────────────────────────────────── */
+@media (max-width: 768px) {
+
+  /* Header: logo + titolo + solo bottone carica */
+  .hdr { padding: 0 12px; gap: 8px; height: 50px; }
+  .hdr-title { display: none; }
+  .hdr-right { gap: 6px; }
+
+  /* Upload: nascondi pills e status, tieni solo il bottone */
+  .upload-pills, .upload-progress, #statusTxt { display: none !important; }
+  .upload-inline { gap: 4px; }
+  .upload-file-btn { font-size: 11px; padding: 4px 8px; }
+  .btn-primary, .btn-ghost { font-size: 11px; padding: 4px 8px; }
+
+  /* Week select più compatto */
+  .week-select { min-width: 120px; font-size: 11px; padding: 4px 6px; }
+  .badge { font-size: 10px; padding: 2px 6px; display: none !important; }
+
+  /* Tabs: scroll orizzontale */
+  .tabs { padding: 0 8px; overflow-x: auto; -webkit-overflow-scrolling: touch; flex-wrap: nowrap; scrollbar-width: none; }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab { padding: 11px 12px; font-size: 11px; white-space: nowrap; flex-shrink: 0; }
+
+  /* Main padding ridotto */
+  .main { padding: 12px; }
+
+  /* KPI cards: 1 colonna su mobile piccolo, 3 su landscape */
+  .metrics-row { grid-template-columns: 1fr; gap: 10px; }
+  .mc-val { font-size: 18px; }
+
+  /* Grid 2-col → 1 colonna */
+  .two-col,
+  div[style*="grid-template-columns:1fr 1fr"] {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+  }
+
+  /* Blocchi */
+  .blk { margin-bottom: 12px; border-radius: 8px; }
+  .blk-hdr { padding: 10px 12px; }
+  .blk-title { font-size: 10px; }
+
+  /* Tabelle: font più piccolo, padding ridotto */
+  table { font-size: 11px; }
+  table th { padding: 5px 8px; font-size: 9px; }
+  table td { padding: 6px 8px; font-size: 10px; }
+  table td.l { font-size: 11px; }
+
+  /* Grafici meno alti */
+  #gruppiChart { height: 220px !important; }
+  #recapChart  { height: 220px !important; }
+  #trendChart  { height: 180px !important; }
+  canvas { max-height: 220px; }
+
+  /* Login box full width */
+  .login-box { width: 92vw; padding: 24px 18px; }
+  .login-title { font-size: 16px; }
+
+  /* Modal full screen */
+  .modal { width: 96vw; max-height: 92vh; }
+  .msel { width: 160px; font-size: 11px; }
+}
+
+/* Landscape phone: KPI su 3 colonne */
+@media (max-width: 768px) and (orientation: landscape) {
+  .metrics-row { grid-template-columns: repeat(3, 1fr); }
+  .mc-val { font-size: 15px; }
+}
+
+/* Tablet (769–1024px): solo aggiustamenti minori */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .main { padding: 16px; }
+  .metrics-row { gap: 12px; }
+  .mc-val { font-size: 19px; }
+  table th { padding: 6px 10px; }
+  table td { padding: 7px 10px; }
+}
 </style>
 </head>
 <body>
@@ -970,7 +1049,7 @@ function buildRecap() {
   </div>
   <div class="blk" style="margin-bottom:20px">
     <div class="blk-hdr"><span class="blk-title">Quote Value % per Gruppo — 2026 vs 2025</span></div>
-    <div style="padding:16px 20px;height:260px"><canvas id="gruppiChart"></canvas></div>
+    <div style="padding:16px 20px;height:260px" id="gruppiChartWrap"><canvas id="gruppiChart"></canvas></div>
   </div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px">
     <div class="blk"><div class="blk-hdr"><span class="blk-title">PREZZO MEDIO E QUOTE PER GRUPPO — 2026 vs 2025</span></div>
@@ -1033,11 +1112,11 @@ function buildRecap() {
   const chartSection = `
   <div class="blk" style="margin-top:4px">
     <div class="blk-hdr"><span class="blk-title">Quote di Mercato Value % — 2026 vs 2025</span></div>
-    <div style="padding:16px 20px;height:300px"><canvas id="recapChart"></canvas></div>
+    <div style="padding:16px 20px;height:300px" id="recapChartWrap"><canvas id="recapChart"></canvas></div>
   </div>
   <div class="blk" id="trendBlk" style="display:none">
     <div class="blk-hdr"><span class="blk-title">Trend Storico QDM% — PDE vs MONDADORI</span></div>
-    <div style="padding:16px 20px;height:240px"><canvas id="trendChart"></canvas></div>
+    <div style="padding:16px 20px;height:240px" id="trendChartWrap"><canvas id="trendChart"></canvas></div>
   </div>`;
 
   setTimeout(()=>{
@@ -1119,9 +1198,66 @@ function buildTabellone(isQuad) {
 }
 
 // ── GENERI ───────────────────────────────────────────────────
+let generiChartInstance = null;
+function buildGeneriChart(pde, merc) {
+  const ctx = document.getElementById('generiChart');
+  if (!ctx) return;
+  if (generiChartInstance) { generiChartInstance.destroy(); generiChartInstance = null; }
+  const n = v => Number(v) || 0;
+
+  // Allinea per genere — usa i generi PDE come riferimento, join con mercato
+  const genres = pde.map(r => r.genre);
+  const deltaPDE  = pde.map(r  => +(n(r.delta_value)*100).toFixed(1));
+  const deltaMERC = genres.map(g => {
+    const m = merc.find(r => r.genre === g);
+    return m ? +(n(m.delta_value)*100).toFixed(1) : null;
+  });
+
+  // Colori barre: verde se positivo, rosso se negativo
+  const colorPDE  = deltaPDE.map(v  => v >= 0 ? 'rgba(34,197,94,0.75)'  : 'rgba(239,68,68,0.75)');
+  const colorMERC = deltaMERC.map(v => v !== null ? (v >= 0 ? 'rgba(0,180,232,0.45)' : 'rgba(239,68,68,0.30)') : 'rgba(0,0,0,0)');
+
+  const isMobile = window.innerWidth <= 768;
+
+  generiChartInstance = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: genres,
+      datasets: [
+        { label: 'Δ% PDE YoY',     data: deltaPDE,  backgroundColor: colorPDE,  borderColor: colorPDE.map(c=>c.replace(/[\d.]+\)$/,'1)')),  borderWidth:1, borderRadius:3 },
+        { label: 'Δ% Mercato YoY', data: deltaMERC, backgroundColor: colorMERC, borderColor: colorMERC.map(c=>c.replace(/[\d.]+\)$/,'0.8)')), borderWidth:1, borderRadius:3 }
+      ]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { labels: { color:'#94a3b8', font:{size:11} } },
+        tooltip: { callbacks: { label: c => `${c.dataset.label}: ${c.parsed.x !== null ? c.parsed.x.toFixed(1)+'%' : '—'}` } }
+      },
+      scales: {
+        x: {
+          grid: { color:'rgba(42,48,69,0.7)' },
+          ticks: { color:'#94a3b8', font:{size:10}, callback: v => v+'%' },
+          title: { display:true, text:'Variazione YoY %', color:'#64748b', font:{size:10} }
+        },
+        y: {
+          grid: { display:false },
+          ticks: { color:'#e2e8f0', font:{size: isMobile ? 9 : 11} }
+        }
+      }
+    }
+  });
+}
+
 function buildGeneri() {
   const pde=currentData.generi.filter(r=>r.tipo==='PDE');
   const merc=currentData.generi.filter(r=>r.tipo==='MERCATO');
+
+  // Altezza dinamica: 28px per genere + margini
+  const chartH = Math.max(260, pde.length * 28 + 60);
+
   function gt(rows, titolo, tblId) {
     const html = `<div class="blk"><div class="blk-hdr"><span class="blk-title">${titolo}</span></div>
       <div class="tbl-wrap"><table id="${tblId}">
@@ -1149,7 +1285,22 @@ function buildGeneri() {
     setTimeout(()=>initSort(tblId), 0);
     return html;
   }
-  return `<div class="two-col">${gt(pde,'GENERI PDE','tbl-generi-pde')}${gt(merc,'GENERI MERCATO','tbl-generi-merc')}</div>`;
+
+  const chartBlock = `<div class="blk" style="margin-bottom:20px">
+    <div class="blk-hdr">
+      <span class="blk-title">Variazione YoY per Genere — PDE vs Mercato</span>
+      <span style="font-size:10px;color:var(--text3)">Δ% Value 2026 vs 2025</span>
+    </div>
+    <div style="padding:16px 20px;height:${chartH}px"><canvas id="generiChart"></canvas></div>
+  </div>`;
+
+  setTimeout(()=>{
+    buildGeneriChart(pde, merc);
+    initSort('tbl-generi-pde');
+    initSort('tbl-generi-merc');
+  }, 0);
+
+  return chartBlock + `<div class="two-col">${gt(pde,'GENERI PDE','tbl-generi-pde')}${gt(merc,'GENERI MERCATO','tbl-generi-merc')}</div>`;
 }
 
 // ── TOP 20 ───────────────────────────────────────────────────
@@ -1318,6 +1469,22 @@ function showApp() {
         </div>`;
     }
   } catch(e) { console.warn('Access check:', e); }
+})();
+</script>
+<script>
+// Adatta altezze canvas su mobile
+(function() {
+  function adaptChartHeights() {
+    const isMobile = window.innerWidth <= 768;
+    const wrap1 = document.getElementById('gruppiChartWrap');
+    const wrap2 = document.getElementById('recapChartWrap');
+    const wrap3 = document.getElementById('trendChartWrap');
+    if (wrap1) wrap1.style.height = isMobile ? '220px' : '260px';
+    if (wrap2) wrap2.style.height = isMobile ? '220px' : '300px';
+    if (wrap3) wrap3.style.height = isMobile ? '180px' : '240px';
+  }
+  window.addEventListener('resize', adaptChartHeights);
+  document.addEventListener('DOMContentLoaded', adaptChartHeights);
 })();
 </script>
 </body>
