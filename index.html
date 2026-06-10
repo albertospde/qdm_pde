@@ -814,9 +814,9 @@ function buildRecap() {
   const pm26=totU26?totV26/totU26:0, pm25=totU25?totV25/totU25:0;
 
   const gruppiRows = Object.entries(GRUPPI).map(([g,promos])=>{
-    let tv26=0,tu26=0,tv25=0,tu25=0;
-    promos.forEach(p=>{const r=rows.find(x=>x.promozione===p);if(r){tv26+=n(r.value_26);tu26+=n(r.units_26);tv25+=n(r.value_25p);tu25+=n(r.units_25p);}});
-    return {g, pm26:tu26?tv26/tu26:0, pm25:tu25?tv25/tu25:0};
+    let tv26=0,tu26=0,tv25=0,tu25=0,tq26=0,tq25=0;
+    promos.forEach(p=>{const r=rows.find(x=>x.promozione===p);if(r){tv26+=n(r.value_26);tu26+=n(r.units_26);tv25+=n(r.value_25p);tu25+=n(r.units_25p);tq26+=n(r.qdm_value_26);tq25+=n(r.qdm_value_25p);}});
+    return {g, pm26:tu26?tv26/tu26:0, pm25:tu25?tv25/tu25:0, qdm26:tq26, qdm25:tq25};
   });
 
   const getSortedRecap = (tableId) => {
@@ -848,12 +848,14 @@ function buildRecap() {
     <div class="blk"><div class="blk-hdr"><span class="blk-title">PREZZO MEDIO PER GRUPPO — 2026 vs 2025</span></div>
       <div class="tbl-wrap"><table id="tbl-recap-grp">
         <thead><tr>
-          ${sh('Gruppo',0,true)}${sh('PM 2026',1)}${sh('PM 2025',2)}${sh('Δ%',3)}
+          ${sh('Gruppo',0,true)}${sh('PM 2026',1)}${sh('PM 2025',2)}${sh('Δ%',3)}${sh('QDM% 26',4)}${sh('QDM% 25',5)}
         </tr></thead>
-        <tbody>${gruppiRows.map(({g,pm26,pm25})=>`<tr>
+        <tbody>${gruppiRows.map(({g,pm26,pm25,qdm26,qdm25})=>{const dq=qdm26-qdm25;return `<tr>
           <td class="l">${g}</td><td>${fmtEur(pm26)}</td><td>${fmtEur(pm25)}</td>
           <td class="${pm25&&delta(pm26,pm25)>=0?'pos':'neg'}">${pm25?fmtPct(delta(pm26,pm25)):'—'}</td>
-        </tr>`).join('')}</tbody>
+          <td style="color:var(--accent);font-weight:600">${fmtPct2(qdm26)}</td>
+          <td><span style="color:var(--text3)">${fmtPct2(qdm25)}</span> <span class="${dq>=0?'pos':'neg'}" style="font-size:10px">${dq>=0?'+':''}${(dq*100).toLocaleString('it-IT',{minimumFractionDigits:1,maximumFractionDigits:1})}pp</span></td>
+        </tr>`}).join('')}</tbody>
       </table></div></div>
     <div class="blk"><div class="blk-hdr"><span class="blk-title">Quote Value % — 2026 vs 2025</span></div>
       <div class="tbl-wrap"><table id="tbl-recap-qdm">
