@@ -1198,54 +1198,115 @@ function buildTabellone(isQuad) {
 }
 
 // ── GENERI ───────────────────────────────────────────────────
+// ── GENERI CHARTS ────────────────────────────────────────────
 let generiChartInstance = null;
-function buildGeneriChart(pde, merc) {
+let generiTrendInstance = null;
+let _generiPDE = [], _generiMERC = [];
+
+function buildGeneriCombinato(pde, merc) {
   const ctx = document.getElementById('generiChart');
   if (!ctx) return;
   if (generiChartInstance) { generiChartInstance.destroy(); generiChartInstance = null; }
   const n = v => Number(v) || 0;
+  const isMob = window.innerWidth <= 768;
 
-  // Allinea per genere — usa i generi PDE come riferimento, join con mercato
   const genres = pde.map(r => r.genre);
-  const deltaPDE  = pde.map(r  => +(n(r.delta_value)*100).toFixed(1));
-  const deltaMERC = genres.map(g => {
-    const m = merc.find(r => r.genre === g);
-    return m ? +(n(m.delta_value)*100).toFixed(1) : null;
-  });
 
-  // Colori barre: verde se positivo, rosso se negativo
-  const colorPDE  = deltaPDE.map(v  => v >= 0 ? 'rgba(34,197,94,0.75)'  : 'rgba(239,68,68,0.75)');
-  const colorMERC = deltaMERC.map(v => v !== null ? (v >= 0 ? 'rgba(0,180,232,0.45)' : 'rgba(239,68,68,0.30)') : 'rgba(0,0,0,0)');
+  // Dataset barre: Val% 2026 PDE e Mercato (asse sinistra)
+  const valPDE26  = pde.map(r => +(n(r.value_pct_26)*100).toFixed(2));
+  const valMERC26 = genres.map(g => { const m=merc.find(r=>r.genre===g); return m ? +(n(m.value_pct_26)*100).toFixed(2) : null; });
 
-  const isMobile = window.innerWidth <= 768;
+  // Dataset linee: Δ% YoY PDE e Mercato (asse destra)
+  const deltaPDE  = pde.map(r => +(n(r.delta_value)*100).toFixed(1));
+  const deltaMERC = genres.map(g => { const m=merc.find(r=>r.genre===g); return m ? +(n(m.delta_value)*100).toFixed(1) : null; });
 
   generiChartInstance = new Chart(ctx, {
-    type: 'bar',
     data: {
       labels: genres,
       datasets: [
-        { label: 'Δ% PDE YoY',     data: deltaPDE,  backgroundColor: colorPDE,  borderColor: colorPDE.map(c=>c.replace(/[\d.]+\)$/,'1)')),  borderWidth:1, borderRadius:3 },
-        { label: 'Δ% Mercato YoY', data: deltaMERC, backgroundColor: colorMERC, borderColor: colorMERC.map(c=>c.replace(/[\d.]+\)$/,'0.8)')), borderWidth:1, borderRadius:3 }
+        { type:'bar',  label:'Val% PDE 2026',    data:valPDE26,  backgroundColor:'rgba(0,180,232,0.6)',  borderColor:'#00b4e8', borderWidth:1, borderRadius:3, yAxisID:'yLeft' },
+        { type:'bar',  label:'Val% Mercato 2026', data:valMERC26, backgroundColor:'rgba(100,116,139,0.35)', borderColor:'rgba(100,116,139,0.7)', borderWidth:1, borderRadius:3, yAxisID:'yLeft' },
+        { type:'line', label:'Δ% PDE YoY',        data:deltaPDE,  borderColor:'#22c55e', backgroundColor:'rgba(34,197,94,0.08)', borderWidth:2.5, pointRadius:4, pointBackgroundColor:'#22c55e', tension:0.3, yAxisID:'yRight', fill:false },
+        { type:'line', label:'Δ% Mercato YoY',    data:deltaMERC, borderColor:'#f59e0b', backgroundColor:'rgba(245,158,11,0.08)', borderWidth:2, pointRadius:3, pointBackgroundColor:'#f59e0b', tension:0.3, yAxisID:'yRight', fill:false, borderDash:[4,3] },
       ]
     },
     options: {
       indexAxis: 'y',
       responsive: true,
       maintainAspectRatio: false,
+      interaction: { mode:'index', axis:'y' },
       plugins: {
-        legend: { labels: { color:'#94a3b8', font:{size:11} } },
-        tooltip: { callbacks: { label: c => `${c.dataset.label}: ${c.parsed.x !== null ? c.parsed.x.toFixed(1)+'%' : '—'}` } }
+        legend: { position:'top', labels:{ color:'#94a3b8', font:{size:11}, boxWidth:12 } },
+        tooltip: { callbacks: {
+          label: c => {
+            const v = c.parsed.x;
+            if (v === null || v === undefined) return null;
+            return `${c.dataset.label}: ${v.toFixed(2)}%`;
+          }
+        }}
       },
       scales: {
-        x: {
-          grid: { color:'rgba(42,48,69,0.7)' },
-          ticks: { color:'#94a3b8', font:{size:10}, callback: v => v+'%' },
-          title: { display:true, text:'Variazione YoY %', color:'#64748b', font:{size:10} }
+        x: { display:false },
+        yLeft: {
+          type:'linear', position:'left',
+          grid:{ color:'rgba(42,48,69,0.6)' },
+          ticks:{ color:'#94a3b8', font:{size:10}, callback:v=>v+'%' },
+          title:{ display:true, text:'Val% 2026', color:'#64748b', font:{size:10} }
+        },
+        yRight: {
+          type:'linear', position:'right',
+          grid:{ drawOnChartArea:false },
+          ticks:{ color:'#94a3b8', font:{size:10}, callback:v=>v+'%' },
+          title:{ display:true, text:'Δ% YoY', color:'#64748b', font:{size:10} }
         },
         y: {
-          grid: { display:false },
-          ticks: { color:'#e2e8f0', font:{size: isMobile ? 9 : 11} }
+          grid:{ display:false },
+          ticks:{ color:'#e2e8f0', font:{size: isMob ? 9 : 11} }
         }
+      }
+    }
+  });
+}
+
+async function buildGeneriTrend(genre) {
+  const ctx = document.getElementById('generiTrendChart');
+  if (!ctx) return;
+  if (generiTrendInstance) { generiTrendInstance.destroy(); generiTrendInstance = null; }
+
+  const {data: weeks} = await sb.from('qdm_settimane').select('week_key').order('anno',{ascending:true}).order('cw_to',{ascending:true});
+  if (!weeks?.length) return;
+  const keys = weeks.map(w=>w.week_key);
+  const {data: allG} = await sb.from('qdm_generi').select('week_key,tipo,genre,value_pct_26,delta_value').in('week_key',keys).eq('genre',genre);
+  if (!allG?.length) return;
+
+  const n = v => Number(v) || 0;
+  const labels = keys.filter(k => allG.some(r=>r.week_key===k));
+  const pdeVal   = labels.map(k => { const r=allG.find(x=>x.week_key===k&&x.tipo==='PDE');    return r ? +(n(r.value_pct_26)*100).toFixed(2) : null; });
+  const mercVal  = labels.map(k => { const r=allG.find(x=>x.week_key===k&&x.tipo==='MERCATO'); return r ? +(n(r.value_pct_26)*100).toFixed(2) : null; });
+  const pdeDelta = labels.map(k => { const r=allG.find(x=>x.week_key===k&&x.tipo==='PDE');    return r ? +(n(r.delta_value)*100).toFixed(1) : null; });
+  const mercDelta= labels.map(k => { const r=allG.find(x=>x.week_key===k&&x.tipo==='MERCATO'); return r ? +(n(r.delta_value)*100).toFixed(1) : null; });
+
+  generiTrendInstance = new Chart(ctx, {
+    data: {
+      labels: labels.map(k=>k.replace('_',' ')),
+      datasets: [
+        { type:'bar',  label:'Val% PDE',     data:pdeVal,   backgroundColor:'rgba(0,180,232,0.5)',   borderColor:'#00b4e8', borderWidth:1, borderRadius:2, yAxisID:'yL' },
+        { type:'bar',  label:'Val% Mercato', data:mercVal,  backgroundColor:'rgba(100,116,139,0.3)', borderColor:'rgba(100,116,139,0.6)', borderWidth:1, borderRadius:2, yAxisID:'yL' },
+        { type:'line', label:'Δ% PDE YoY',   data:pdeDelta, borderColor:'#22c55e', borderWidth:2.5, pointRadius:4, pointBackgroundColor:'#22c55e', tension:0.35, yAxisID:'yR', fill:false },
+        { type:'line', label:'Δ% Merc YoY',  data:mercDelta,borderColor:'#f59e0b', borderWidth:2, pointRadius:3, pointBackgroundColor:'#f59e0b', tension:0.35, yAxisID:'yR', fill:false, borderDash:[4,3] },
+      ]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      interaction:{ mode:'index' },
+      plugins:{
+        legend:{ position:'top', labels:{ color:'#94a3b8', font:{size:11}, boxWidth:12 } },
+        tooltip:{ callbacks:{ label: c => c.parsed.y !== null ? `${c.dataset.label}: ${c.parsed.y.toFixed(2)}%` : null } }
+      },
+      scales:{
+        x:{ grid:{color:'rgba(42,48,69,0.5)'}, ticks:{color:'#64748b', font:{size:10}, maxRotation:35} },
+        yL:{ type:'linear', position:'left',  grid:{color:'rgba(42,48,69,0.5)'}, ticks:{color:'#94a3b8', font:{size:10}, callback:v=>v+'%'}, title:{display:true,text:'Val%',color:'#64748b',font:{size:10}} },
+        yR:{ type:'linear', position:'right', grid:{drawOnChartArea:false}, ticks:{color:'#94a3b8', font:{size:10}, callback:v=>v+'%'}, title:{display:true,text:'Δ% YoY',color:'#64748b',font:{size:10}} }
       }
     }
   });
@@ -1254,9 +1315,11 @@ function buildGeneriChart(pde, merc) {
 function buildGeneri() {
   const pde=currentData.generi.filter(r=>r.tipo==='PDE');
   const merc=currentData.generi.filter(r=>r.tipo==='MERCATO');
+  _generiPDE = pde; _generiMERC = merc;
 
-  // Altezza dinamica: 28px per genere + margini
-  const chartH = Math.max(260, pde.length * 28 + 60);
+  const chartH = Math.max(280, pde.length * 30 + 80);
+  const genres = pde.map(r=>r.genre);
+  const firstGenre = genres[0] || '';
 
   function gt(rows, titolo, tblId) {
     const html = `<div class="blk"><div class="blk-hdr"><span class="blk-title">${titolo}</span></div>
@@ -1286,21 +1349,34 @@ function buildGeneri() {
     return html;
   }
 
-  const chartBlock = `<div class="blk" style="margin-bottom:20px">
+  const html = `
+  <div class="blk" style="margin-bottom:20px">
     <div class="blk-hdr">
-      <span class="blk-title">Variazione YoY per Genere — PDE vs Mercato</span>
-      <span style="font-size:10px;color:var(--text3)">Δ% Value 2026 vs 2025</span>
+      <span class="blk-title">Quote &amp; Variazione YoY per Genere — PDE vs Mercato</span>
+      <span style="font-size:10px;color:var(--text3)">Barre = Val% 2026 &nbsp;|&nbsp; Linee = Δ% YoY</span>
     </div>
     <div style="padding:16px 20px;height:${chartH}px"><canvas id="generiChart"></canvas></div>
-  </div>`;
+  </div>
+  <div class="blk" style="margin-bottom:20px">
+    <div class="blk-hdr">
+      <span class="blk-title">Trend storico per Genere</span>
+      <select id="genreSelect" onchange="buildGeneriTrend(this.value)"
+        style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:4px 8px;border-radius:5px;font-size:11px;font-family:var(--sans);cursor:pointer;outline:none">
+        ${genres.map(g=>`<option value="${g}">${g}</option>`).join('')}
+      </select>
+    </div>
+    <div style="padding:16px 20px;height:240px"><canvas id="generiTrendChart"></canvas></div>
+  </div>
+  <div class="two-col">${gt(pde,'GENERI PDE','tbl-generi-pde')}${gt(merc,'GENERI MERCATO','tbl-generi-merc')}</div>`;
 
   setTimeout(()=>{
-    buildGeneriChart(pde, merc);
+    buildGeneriCombinato(pde, merc);
+    buildGeneriTrend(firstGenre);
     initSort('tbl-generi-pde');
     initSort('tbl-generi-merc');
   }, 0);
 
-  return chartBlock + `<div class="two-col">${gt(pde,'GENERI PDE','tbl-generi-pde')}${gt(merc,'GENERI MERCATO','tbl-generi-merc')}</div>`;
+  return html;
 }
 
 // ── TOP 20 ───────────────────────────────────────────────────
