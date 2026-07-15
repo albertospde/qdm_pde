@@ -336,6 +336,7 @@ let unmapped = [];
 let currentWeekKey = null;
 let currentData = {};
 let activeTab = 'recap';
+let top20Promo = 'PDE';
 
 // ── DRAG & DROP — supportato direttamente sul file input ──────────────────────────────────────────
 
@@ -1380,10 +1381,42 @@ function buildGeneri() {
 }
 
 // ── TOP 20 ───────────────────────────────────────────────────
+const PDE_PROMOS = new Set(['PDE SERVIZI COMM. PER EDITORIA','PDE SERVICE']);
+
+function setTop20Promo(val) {
+  top20Promo = val;
+  document.getElementById('mainContent').innerHTML = buildTop20();
+}
+
 function buildTop20() {
-  const PDE_PROMOS = new Set(['PDE SERVIZI COMM. PER EDITORIA','PDE SERVICE']);
-  const week=currentData.top20.filter(r=>r.tipo==='WEEK'&&PDE_PROMOS.has(r.promozione)).sort((a,b)=>a.rank_pos-b.rank_pos).slice(0,20);
-  const tot=currentData.top20.filter(r=>r.tipo==='TOTALE'&&PDE_PROMOS.has(r.promozione)).sort((a,b)=>a.rank_pos-b.rank_pos).slice(0,20);
+  const rows = currentData.top20 || [];
+
+  // Etichetta di visualizzazione per ogni riga: le due varianti PDE confluiscono in 'PDE'
+  const promoLabel = p => PDE_PROMOS.has(p) ? 'PDE' : p;
+
+  // Elenco promozioni distinte presenti nei dati, ordinato alfabeticamente
+  const promoSet = new Set(rows.map(r=>promoLabel(r.promozione)));
+  const promoList = [...promoSet].sort((a,b)=>a.localeCompare(b,'it'));
+
+  // Se la promozione selezionata non esiste più nei dati correnti, torna a 'ALL'
+  if (top20Promo!=='ALL' && !promoSet.has(top20Promo)) top20Promo='ALL';
+
+  const matchPromo = r => top20Promo==='ALL' ? true : promoLabel(r.promozione)===top20Promo;
+
+  const week=rows.filter(r=>r.tipo==='WEEK'&&matchPromo(r)).sort((a,b)=>a.rank_pos-b.rank_pos).slice(0,20);
+  const tot=rows.filter(r=>r.tipo==='TOTALE'&&matchPromo(r)).sort((a,b)=>a.rank_pos-b.rank_pos).slice(0,20);
+
+  const labelSel = top20Promo==='ALL' ? 'TUTTI GLI EDITORI' : top20Promo;
+
+  const selectHtml = `<div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+    <label style="font-size:11px;color:var(--text3)">Promozione:</label>
+    <select onchange="setTop20Promo(this.value)"
+      style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:5px 10px;border-radius:6px;font-size:12px;font-family:var(--sans);cursor:pointer;min-width:220px">
+      <option value="ALL" ${top20Promo==='ALL'?'selected':''}>✅ Seleziona tutti (tutti gli editori)</option>
+      ${promoList.map(p=>`<option value="${p}" ${top20Promo===p?'selected':''}>${p}</option>`).join('')}
+    </select>
+  </div>`;
+
   function rb(n){
     if(n===1) return `<span class="rank-b g">#1</span>`;
     if(n===2) return `<span class="rank-b s">#2</span>`;
@@ -1391,9 +1424,9 @@ function buildTop20() {
     return `<span class="rank-b">#${n}</span>`;
   }
   function t20(rows, titolo, tblId){
-    if(!rows.length) return `<div class="blk"><div class="blk-hdr"><span class="blk-title">${titolo}</span></div><div style="padding:20px;text-align:center;color:var(--text3);font-size:12px">Nessun titolo PDE in classifica</div></div>`;
+    if(!rows.length) return `<div class="blk"><div class="blk-hdr"><span class="blk-title">${titolo}</span></div><div style="padding:20px;text-align:center;color:var(--text3);font-size:12px">Nessun titolo in classifica per questa promozione</div></div>`;
     const html = `<div class="blk" style="margin-bottom:0">
-      <div class="blk-hdr"><span class="blk-title">${titolo}</span><span style="font-size:10px;color:var(--text3)">${rows.length} titoli PDE</span></div>
+      <div class="blk-hdr"><span class="blk-title">${titolo}</span><span style="font-size:10px;color:var(--text3)">${rows.length} titoli</span></div>
       <div class="tbl-wrap"><table id="${tblId}">
         <thead><tr>
           ${sh('#Mkt',0)}
@@ -1418,7 +1451,7 @@ function buildTop20() {
     setTimeout(()=>initSort(tblId), 0);
     return html;
   }
-  return `<div class="two-col">${t20(week,'TOP 20 SETTIMANA — Titoli PDE','tbl-top20-week')}${t20(tot,'TOP 20 PROGRESSIVO — Titoli PDE','tbl-top20-tot')}</div>`;
+  return `${selectHtml}<div class="two-col">${t20(week,`TOP 20 SETTIMANA — ${labelSel}`,'tbl-top20-week')}${t20(tot,`TOP 20 PROGRESSIVO — ${labelSel}`,'tbl-top20-tot')}</div>`;
 }
 
 // ── UTILS ────────────────────────────────────────────────────
