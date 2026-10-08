@@ -66,6 +66,15 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14
 .blk{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:20px;}
 .blk-hdr{padding:12px 16px;background:var(--surface2);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
 .blk-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--text2);}
+.seg{display:inline-flex;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:2px;gap:2px;}
+.seg button{background:transparent;border:none;border-radius:4px;color:var(--text3);font-family:var(--sans);font-size:11px;padding:4px 10px;cursor:pointer;white-space:nowrap;}
+.seg button.on{background:var(--surface2);color:var(--accent);font-weight:600;}
+.trend-chips{display:flex;flex-wrap:wrap;gap:6px;max-height:64px;overflow-y:auto;}
+.trend-chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--border);border-radius:999px;padding:3px 10px;font-size:11px;color:var(--text3);cursor:pointer;user-select:none;}
+.trend-chip.on{color:var(--text);border-color:var(--text3);}
+.trend-chip i{width:8px;height:8px;border-radius:50%;display:inline-block;}
+.trend-chip:not(.on) i{opacity:.25;}
+.trend-note{padding:0 20px 14px;font-size:11px;color:var(--text3);}
 
 .tbl-wrap{overflow-x:auto;}
 table{width:100%;border-collapse:collapse;font-size:12px;}
@@ -127,6 +136,13 @@ table th.sort-desc::after{content:' ▼';color:var(--accent);font-size:9px;}
 .btn-login{width:100%;padding:10px;font-size:14px;font-weight:600;}
 .logout-btn{background:none;border:1px solid var(--border);color:var(--text3);padding:4px 10px;border-radius:5px;font-size:11px;cursor:pointer;font-family:var(--sans);transition:.15s;}
 .logout-btn:hover{border-color:var(--red);color:var(--red);}
+.pwd-btn{background:none;border:1px solid var(--border);color:var(--text3);padding:4px 10px;border-radius:5px;font-size:11px;cursor:pointer;font-family:var(--sans);transition:.15s;white-space:nowrap;}
+.pwd-btn:hover{border-color:var(--accent);color:var(--accent);}
+.modal.pwd-modal{width:400px;}
+.pwd-err{font-size:12px;color:var(--red);margin-bottom:12px;display:none;}
+.pwd-ok{text-align:center;padding:24px 20px 20px;}
+.pwd-ok-icon{font-size:30px;margin-bottom:10px;}
+.pwd-ok-title{font-size:15px;font-weight:600;margin-bottom:20px;}
 
 /* ── MOBILE (≤ 768px) ───────────────────────────────────────── */
 @media (max-width: 768px) {
@@ -190,6 +206,8 @@ table th.sort-desc::after{content:' ▼';color:var(--accent);font-size:9px;}
   /* Modal full screen */
   .modal { width: 96vw; max-height: 92vh; }
   .msel { width: 160px; font-size: 11px; }
+  .pwd-btn .pwd-lbl { display: none; }
+  .pwd-btn { padding: 4px 7px; }
 }
 
 /* Landscape phone: KPI su 3 colonne */
@@ -206,7 +224,60 @@ table th.sort-desc::after{content:' ▼';color:var(--accent);font-size:9px;}
   table th { padding: 6px 10px; }
   table td { padding: 7px 10px; }
 }
+/* ── SELETTORE TEMA ── */
+.theme-switch{display:flex;align-items:center;gap:2px;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:2px;}
+.theme-opt{display:flex;align-items:center;gap:5px;background:transparent;border:none;border-radius:5px;color:var(--text3);font-family:var(--sans);font-size:11px;padding:4px 9px;cursor:pointer;transition:color .15s,background .15s;white-space:nowrap;}
+.theme-opt:hover{color:var(--text);}
+.theme-opt svg{width:12px;height:12px;fill:currentColor;}
+html:not([data-theme="light"]) .theme-opt[data-set="dark"],
+html[data-theme="light"] .theme-opt[data-set="light"]{color:var(--text);background:rgba(0,180,232,.15);}
+@media (max-width:768px){.theme-opt span{display:none;}.theme-opt{padding:4px 7px;}}
+
+/* ── TEMA CHIARO ── */
+html[data-theme="light"]{
+  color-scheme:light;
+  --bg:#eef2f9;--surface:#ffffff;--surface2:#f4f7fc;--border:rgba(26,45,107,.16);
+  --accent:#0092c2;--accent2:#1a2d6b;
+  --green:#1d8a4a;--red:#c43d3d;--yellow:#a8781a;
+  --text:#16204a;--text2:#5a6388;--text3:#7a82a3;
+}
+html[data-theme="light"] .hdr{box-shadow:0 1px 8px rgba(26,45,107,.06);}
+html[data-theme="light"] .hdr > div:first-child,
+html[data-theme="light"] .login-box > div:first-child > div:first-child{border:1px solid var(--border);}
+html[data-theme="light"] .mc,
+html[data-theme="light"] .blk,
+html[data-theme="light"] .login-box{box-shadow:0 2px 10px rgba(26,45,107,.06);}
+html[data-theme="light"] table td{border-bottom-color:rgba(26,45,107,.08);}
+html[data-theme="light"] table tr:hover td{background:rgba(26,45,107,.03);}
+html[data-theme="light"] table tr.tot td{background:rgba(0,146,194,.08);}
+html[data-theme="light"] .tg th{background:rgba(0,146,194,.08);}
+html[data-theme="light"] .mrow{border-bottom-color:rgba(26,45,107,.10);}
+html[data-theme="light"] .modal-ov{background:rgba(22,32,74,.35);}
+html[data-theme="light"] .modal{box-shadow:0 30px 80px rgba(26,45,107,.25);}
+html[data-theme="light"] .toast{box-shadow:0 10px 30px rgba(26,45,107,.18);}
+html[data-theme="light"] .btn-primary{color:#fff;}
+html[data-theme="light"] .btn-primary:hover{background:#007fa9;}
+html[data-theme="light"] .badge{background:rgba(0,146,194,.08);border-color:rgba(0,146,194,.25);}
+html[data-theme="light"] .rank-b.g{background:rgba(168,120,26,.12);}
+html[data-theme="light"] .rank-b.s{background:rgba(26,45,107,.07);}
+html[data-theme="light"] .rank-b.b{background:rgba(180,120,60,.12);color:#9a5b1f;}
 </style>
+<script>
+(function () {
+  try { if (localStorage.getItem('pde-hub-theme') === 'light') document.documentElement.setAttribute('data-theme', 'light'); } catch (e) {}
+  function applyTheme(t) {
+    if (t === 'light') document.documentElement.setAttribute('data-theme', 'light');
+    else document.documentElement.removeAttribute('data-theme');
+    if (window.refreshChartTheme) window.refreshChartTheme();
+  }
+  window.setTheme = function (t) {
+    applyTheme(t);
+    try { localStorage.setItem('pde-hub-theme', t); } catch (e) {}
+  };
+  // scelta fatta nel Hub (o in un'altra app PDE aperta) → aggiorna in tempo reale
+  window.addEventListener('storage', function (e) { if (e.key === 'pde-hub-theme') applyTheme(e.newValue); });
+})();
+</script>
 </head>
 <body>
 
@@ -259,6 +330,17 @@ table th.sort-desc::after{content:' ▼';color:var(--accent);font-size:9px;}
       <option value="">— Seleziona settimana —</option>
     </select>
     <span class="badge" id="weekBadge" style="display:none"></span>
+    <div class="theme-switch" role="group" aria-label="Tema">
+      <button class="theme-opt" data-set="light" onclick="setTheme('light')" title="Versione chiara">
+        <svg viewBox="0 0 24 24"><path d="M12 7a5 5 0 100 10 5 5 0 000-10zM11 1h2v3h-2zm0 19h2v3h-2zM1 11h3v2H1zm19 0h3v2h-3zM4.22 5.64l1.42-1.42 2.12 2.12-1.42 1.42zm12.02 12.02l1.42-1.42 2.12 2.12-1.42 1.42zM4.22 18.36l2.12-2.12 1.42 1.42-2.12 2.12zM16.24 6.34l2.12-2.12 1.42 1.42-2.12 2.12z"/></svg>
+        <span>Chiaro</span>
+      </button>
+      <button class="theme-opt" data-set="dark" onclick="setTheme('dark')" title="Versione scura">
+        <svg viewBox="0 0 24 24"><path d="M12.3 22A10 10 0 019.6 2.4a8 8 0 0010 10A10 10 0 0112.3 22z"/></svg>
+        <span>Scuro</span>
+      </button>
+    </div>
+    <button class="pwd-btn" id="pwdBtn" style="display:none" onclick="openPwd()" title="Cambia password">🔑<span class="pwd-lbl"> Cambia password</span></button>
     <button class="logout-btn" id="logoutBtn" style="display:none" onclick="doLogout()">Esci</button>
   </div>
 </div>
@@ -296,9 +378,48 @@ table th.sort-desc::after{content:' ▼';color:var(--accent);font-size:9px;}
   </div>
 </div>
 
+<div class="modal-ov" id="pwdModal" style="display:none">
+  <div class="modal pwd-modal">
+    <div id="pwdForm">
+      <div class="modal-hdr"><h3>🔑 Cambia password</h3><p>La nuova password vale per tutte le app PDE.</p></div>
+      <div class="modal-body">
+        <div class="login-field"><label>Vecchia password</label><input type="password" id="pwdOld" autocomplete="current-password"></div>
+        <div class="login-field"><label>Nuova password</label><input type="password" id="pwdNew" autocomplete="new-password"></div>
+        <div class="login-field"><label>Ripeti nuova password</label><input type="password" id="pwdRep" autocomplete="new-password"></div>
+        <div class="pwd-err" id="pwdErr"></div>
+      </div>
+      <div class="modal-ftr">
+        <button class="btn btn-ghost" id="pwdCancel" onclick="closePwd()">Annulla</button>
+        <button class="btn btn-primary" id="pwdConfirm" onclick="submitPwd()"><span class="spin" id="pwdSpin" style="display:none"></span>Conferma</button>
+      </div>
+    </div>
+    <div id="pwdDone" class="pwd-ok" style="display:none">
+      <div class="pwd-ok-icon">✅</div>
+      <div class="pwd-ok-title">Password cambiata con successo</div>
+      <button class="btn btn-primary" id="pwdOkBtn" onclick="closePwd()">OK</button>
+    </div>
+  </div>
+</div>
+
 <div id="toasts"></div>
 
 <script>
+// ── Colori grafici in base al tema ──
+const CHART_THEME = {
+  dark:  { t1:'#e2e8f0', t2:'#94a3b8', t3:'#64748b', grid:'rgba(42,48,69,0.6)',  grid2:'rgba(42,48,69,0.5)' },
+  light: { t1:'#16204a', t2:'#5a6388', t3:'#7a82a3', grid:'rgba(26,45,107,0.10)', grid2:'rgba(26,45,107,0.08)' }
+};
+function cc(k){ return CHART_THEME[document.documentElement.getAttribute('data-theme')==='light'?'light':'dark'][k]; }
+window.refreshChartTheme = function(){
+  if(typeof Chart==='undefined') return;
+  const cur = document.documentElement.getAttribute('data-theme')==='light' ? 'light' : 'dark';
+  const other = cur==='light' ? 'dark' : 'light';
+  const map = {};
+  Object.keys(CHART_THEME[other]).forEach(k => map[CHART_THEME[other][k]] = CHART_THEME[cur][k]);
+  const walk = o => { if(!o || typeof o!=='object') return; for(const k in o){ const v=o[k]; if(typeof v==='string' && map[v]) o[k]=map[v]; else if(v && typeof v==='object' && !(v instanceof HTMLElement)) walk(v); } };
+  Object.values(Chart.instances).forEach(ch => { walk(ch.config.options); ch.update('none'); });
+};
+
 const SB_URL = 'https://tdflwenlylhctxssatax.supabase.co';
 const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRkZmx3ZW5seWxoY3R4c3NhdGF4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYzMzgyNzYsImV4cCI6MjA5MTkxNDI3Nn0.l35qEL7LOvyYuI1McQlVqj4vbyTqmlevcmqWbTGYi2Q';
 const sb = window.supabase.createClient(SB_URL, SB_KEY);
@@ -574,6 +695,18 @@ async function doElabora() {
   const {error:e2} = await sb.from('qdm_recap').insert(recapRows);
   if (e2) throw new Error('qdm_recap: ' + e2.message);
 
+  // Storico compatto: sopravvive alla pulizia delle settimane vecchie
+  const trendRows = recapRows.map(r => ({
+    week_key:weekKey, anno, cw_to:cwTo, promozione:r.promozione,
+    value_26:r.value_26, units_26:r.units_26,
+    value_25p:r.value_25p, units_25p:r.units_25p,
+    value_25q:r.value_25q, units_25q:r.units_25q,
+    updated_at:new Date().toISOString(),
+  }));
+  await sb.from('qdm_trend').delete().eq('week_key',weekKey);
+  const {error:eT} = await sb.from('qdm_trend').insert(trendRows);
+  if (eT) throw new Error('qdm_trend: ' + eT.message);
+
   setProgress(70, 'Salvo generi...');
   const genPDE = parseGeneri(recognized.generiPDE.rows, 'PDE', weekKey);
   const genMerc = parseGeneri(recognized.generiMercato.rows, 'MERCATO', weekKey);
@@ -592,12 +725,33 @@ async function doElabora() {
     if (e4) throw new Error('qdm_top20: ' + e4.message);
   }
 
+  setProgress(90, 'Pulizia settimane vecchie...');
+  const latestKey = await cleanupOldWeeks();
+  trendState.cache = null;
+
   setProgress(95, 'Aggiorno lista settimane...');
+  currentWeekKey = latestKey || weekKey;
   await loadWeekList();
   setProgress(100, 'Completato!');
   setTimeout(hideProgress, 800);
-  await loadWeek(weekKey);
+  await loadWeek(currentWeekKey);
   toast(`✓ Settimana ${weekKey.replace('_',' ')} salvata`, 'ok');
+}
+
+// Tiene il dettaglio (recap + top20) solo dell'ultima settimana caricata.
+// Lo storico resta in qdm_trend (grafico annuale) e qdm_generi (trend generi, poche righe).
+async function cleanupOldWeeks() {
+  const {data} = await sb.from('qdm_settimane').select('week_key')
+    .order('anno',{ascending:false}).order('cw_to',{ascending:false}).limit(1);
+  const latestKey = data?.[0]?.week_key;
+  if (!latestKey) return null;
+  const [d1,d2] = await Promise.all([
+    sb.from('qdm_top20').delete().neq('week_key',latestKey),
+    sb.from('qdm_recap').delete().neq('week_key',latestKey),
+  ]);
+  if (d1.error) console.warn('cleanup qdm_top20:', d1.error.message);
+  if (d2.error) console.warn('cleanup qdm_recap:', d2.error.message);
+  return latestKey;
 }
 
 function normalizeWeekKey(period) {
@@ -765,7 +919,13 @@ async function saveMap() {
 
 // ── STORICO ──────────────────────────────────────────────────
 async function loadWeekList() {
-  const {data} = await sb.from('qdm_settimane').select('*').order('anno',{ascending:false}).order('cw_to',{ascending:false});
+  const [{data:all}, {data:withRecap}] = await Promise.all([
+    sb.from('qdm_settimane').select('*').order('anno',{ascending:false}).order('cw_to',{ascending:false}),
+    sb.from('qdm_recap').select('week_key'),
+  ]);
+  // Solo le settimane con dettaglio ancora presente (le vecchie vivono in qdm_trend)
+  const keep = new Set((withRecap||[]).map(r=>r.week_key));
+  const data = (all||[]).filter(w=>keep.has(w.week_key));
   const sel = document.getElementById('weekSelect');
   if (!data?.length) {sel.style.display='none';return;}
   sel.style.display = 'block';
@@ -911,12 +1071,12 @@ function buildGruppiChart(gruppiRows) {
     options: {
       responsive: true, maintainAspectRatio: false,
       plugins: {
-        legend: { labels: { color:'#94a3b8', font:{size:11} } },
+        legend: { labels: { color:cc('t2'), font:{size:11} } },
         tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y.toFixed(2)}%` } }
       },
       scales: {
-        x: { grid:{color:'rgba(42,48,69,0.6)'}, ticks:{color:'#94a3b8',font:{size:11}} },
-        y: { grid:{color:'rgba(42,48,69,0.6)'}, ticks:{color:'#94a3b8',font:{size:10},callback:v=>v+'%'}, beginAtZero:true }
+        x: { grid:{color:cc('grid')}, ticks:{color:cc('t2'),font:{size:11}} },
+        y: { grid:{color:cc('grid')}, ticks:{color:cc('t2'),font:{size:10},callback:v=>v+'%'}, beginAtZero:true }
       }
     }
   });
@@ -925,70 +1085,15 @@ function buildGruppiChart(gruppiRows) {
 let recapChartInstance = null;
 async function buildRecapChart(recapRows) {
   const n = v => Number(v) || 0;
-  // Prendi tutte le settimane per il trend PDE
-  const {data: allWeeks} = await sb.from('qdm_settimane').select('week_key').order('anno',{ascending:true}).order('cw_to',{ascending:true});
-  let trendLabels = [], trendPDE = [], trendMON = [];
-  if (allWeeks?.length > 1) {
-    const keys = allWeeks.map(w=>w.week_key);
-    const {data: allRecap} = await sb.from('qdm_recap').select('week_key,promozione,qdm_value_26').in('week_key', keys);
-    keys.forEach(k => {
-      const wRows = allRecap?.filter(r=>r.week_key===k) || [];
-      const pde = wRows.filter(r=>['PDE SERVIZI COMM. PER EDITORIA','PDE SERVICE'].includes(r.promozione));
-      const mon = wRows.filter(r=>r.promozione==='MONDADORI');
-      const sumPDE = pde.reduce((s,r)=>s+n(r.qdm_value_26),0);
-      const sumMON = mon.reduce((s,r)=>s+n(r.qdm_value_26),0);
-      if (sumPDE > 0) {
-        trendLabels.push(k.replace('_',' '));
-        trendPDE.push(+(sumPDE*100).toFixed(2));
-        trendMON.push(+(sumMON*100).toFixed(2));
-      }
-    });
-  }
-
   // Dati barre: promozioni correnti (escluso ALTRO), ordinate per qdm_value_26
   const barRows = [...recapRows].filter(r=>r.promozione!=='ALTRO').sort((a,b)=>n(b.qdm_value_26)-n(a.qdm_value_26)).slice(0,12);
   const barLabels = barRows.map(r=>r.promozione.length>18?r.promozione.slice(0,16)+'…':r.promozione);
   const bar26 = barRows.map(r=>+(n(r.qdm_value_26)*100).toFixed(2));
   const bar25 = barRows.map(r=>+(n(r.qdm_value_25p)*100).toFixed(2));
 
-  const hasTrend = trendLabels.length > 1;
-
-  const datasets = [
-    { type:'bar', label:'QDM% 2026', data:bar26, backgroundColor:'rgba(0,180,232,0.75)', borderColor:'#00b4e8', borderWidth:1, borderRadius:3, yAxisID:'y' },
-    { type:'bar', label:'QDM% 2025', data:bar25, backgroundColor:'rgba(100,116,139,0.45)', borderColor:'rgba(100,116,139,0.7)', borderWidth:1, borderRadius:3, yAxisID:'y' },
-  ];
-  if (hasTrend) {
-    datasets.push({ type:'line', label:'Trend PDE %', data: Array(barLabels.length).fill(null), realData: trendPDE, realLabels: trendLabels, backgroundColor:'rgba(34,197,94,0.15)', borderColor:'#22c55e', borderWidth:2, pointRadius:4, pointBackgroundColor:'#22c55e', tension:0.35, yAxisID:'y2', spanGaps:false });
-    datasets.push({ type:'line', label:'Trend MONDADORI %', data: Array(barLabels.length).fill(null), realData: trendMON, realLabels: trendLabels, backgroundColor:'rgba(245,158,11,0.1)', borderColor:'#f59e0b', borderWidth:2, pointRadius:4, pointBackgroundColor:'#f59e0b', tension:0.35, yAxisID:'y2', spanGaps:false, borderDash:[5,3] });
-  }
-
   const ctx = document.getElementById('recapChart');
   if (!ctx) return;
   if (recapChartInstance) { recapChartInstance.destroy(); recapChartInstance = null; }
-
-  // Se abbiamo trend, usiamo un asse X duale con plugin custom
-  if (hasTrend) {
-    // Grafico separato trend sotto le barre
-    const ctxTrend = document.getElementById('trendChart');
-    if (ctxTrend) {
-      if (window._trendChartInst) { window._trendChartInst.destroy(); }
-      window._trendChartInst = new Chart(ctxTrend, {
-        type:'line',
-        data:{ labels:trendLabels, datasets:[
-          { label:'PDE + PDE SERVICE', data:trendPDE, borderColor:'#22c55e', backgroundColor:'rgba(34,197,94,0.08)', borderWidth:2.5, pointRadius:4, pointBackgroundColor:'#22c55e', tension:0.35, fill:true },
-          { label:'MONDADORI', data:trendMON, borderColor:'#f59e0b', backgroundColor:'rgba(245,158,11,0.06)', borderWidth:2.5, pointRadius:4, pointBackgroundColor:'#f59e0b', tension:0.35, fill:true, borderDash:[5,3] },
-        ]},
-        options:{
-          responsive:true, maintainAspectRatio:false,
-          plugins:{ legend:{labels:{color:'#94a3b8',font:{size:11}}}, tooltip:{callbacks:{label:ctx=>`${ctx.dataset.label}: ${ctx.parsed.y.toFixed(2)}%`}} },
-          scales:{
-            x:{ grid:{color:'rgba(42,48,69,0.6)'}, ticks:{color:'#64748b',font:{size:10},maxRotation:40} },
-            y:{ grid:{color:'rgba(42,48,69,0.6)'}, ticks:{color:'#94a3b8',font:{size:10},callback:v=>v+'%'}, title:{display:true,text:'QDM %',color:'#64748b',font:{size:10}} }
-          }
-        }
-      });
-    }
-  }
 
   recapChartInstance = new Chart(ctx, {
     data:{ labels:barLabels, datasets:[
@@ -997,10 +1102,10 @@ async function buildRecapChart(recapRows) {
     ]},
     options:{
       responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{labels:{color:'#94a3b8',font:{size:11}}}, tooltip:{callbacks:{label:ctx=>`${ctx.dataset.label}: ${ctx.parsed.y.toFixed(2)}%`}} },
+      plugins:{ legend:{labels:{color:cc('t2'),font:{size:11}}}, tooltip:{callbacks:{label:ctx=>`${ctx.dataset.label}: ${ctx.parsed.y.toFixed(2)}%`}} },
       scales:{
-        x:{ grid:{color:'rgba(42,48,69,0.6)'}, ticks:{color:'#94a3b8',font:{size:10},maxRotation:35} },
-        y:{ grid:{color:'rgba(42,48,69,0.6)'}, ticks:{color:'#94a3b8',font:{size:10},callback:v=>v+'%'}, title:{display:true,text:'QDM %',color:'#64748b',font:{size:10}} }
+        x:{ grid:{color:cc('grid')}, ticks:{color:cc('t2'),font:{size:10},maxRotation:35} },
+        y:{ grid:{color:cc('grid')}, ticks:{color:cc('t2'),font:{size:10},callback:v=>v+'%'}, title:{display:true,text:'QDM %',color:cc('t3'),font:{size:10}} }
       }
     }
   });
@@ -1115,9 +1220,27 @@ function buildRecap() {
     <div class="blk-hdr"><span class="blk-title">Quote di Mercato Value % — 2026 vs 2025</span></div>
     <div style="padding:16px 20px;height:300px" id="recapChartWrap"><canvas id="recapChart"></canvas></div>
   </div>
-  <div class="blk" id="trendBlk" style="display:none">
-    <div class="blk-hdr"><span class="blk-title">Trend Storico QDM% — PDE vs MONDADORI</span></div>
-    <div style="padding:16px 20px;height:240px" id="trendChartWrap"><canvas id="trendChart"></canvas></div>
+  <div class="blk" id="trendBlk">
+    <div class="blk-hdr" style="flex-wrap:wrap;gap:8px">
+      <span class="blk-title" id="trendTitle">Trend annuale per promozione</span>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <div class="seg" id="trendMis">
+          <button data-v="v" class="${trendState.mis==='v'?'on':''}">Valore €</button>
+          <button data-v="u" class="${trendState.mis==='u'?'on':''}">Copie</button>
+        </div>
+        <div class="seg" id="trendMod">
+          <button data-v="prog" class="${trendState.mod==='prog'?'on':''}">Progressivo</button>
+          <button data-v="week" class="${trendState.mod==='week'?'on':''}">Singola week</button>
+          <button data-v="qdm" class="${trendState.mod==='qdm'?'on':''}">Quota %</button>
+        </div>
+      </div>
+    </div>
+    <div style="padding:14px 20px 0">
+      <div class="metrics-row" id="trendKpis" style="margin-bottom:12px"></div>
+      <div class="trend-chips" id="trendChips"></div>
+    </div>
+    <div style="padding:8px 20px 8px;height:360px"><canvas id="trendChart"></canvas></div>
+    <div class="trend-note" id="trendNote"></div>
   </div>`;
 
   setTimeout(()=>{
@@ -1125,16 +1248,127 @@ function buildRecap() {
     initSort('tbl-recap-qdm');
     initSort('tbl-recap-det', 'tr.tot');
     buildGruppiChart(gruppiRows);
-    buildRecapChart(rows).then(()=>{
-      // mostra trend solo se esiste
-      const tc = document.getElementById('trendChart');
-      if (tc && window._trendChartInst) {
-        const tb = document.getElementById('trendBlk');
-        if (tb) tb.style.display = 'block';
-      }
-    });
+    buildRecapChart(rows);
+    buildTrendAnnuale();
   }, 0);
   return html + chartSection;
+}
+
+// ── TREND ANNUALE (da qdm_trend) ─────────────────────────────
+const TREND_PDE = ['PDE SERVIZI COMM. PER EDITORIA','PDE SERVICE'];
+const TREND_COLORS = ['#f59e0b','#22c55e','#a855f7','#ef4444','#ec4899','#14b8a6','#eab308','#6366f1','#f97316','#84cc16'];
+const trendState = { mis:'v', mod:'prog', sel:null, cache:null };
+let trendChartInstance = null;
+
+async function buildTrendAnnuale() {
+  if (!document.getElementById('trendChart')) return;
+  const anno = parseInt((currentWeekKey||'').slice(0,4)) || new Date().getFullYear();
+  if (!trendState.cache || trendState.cache.anno !== anno) {
+    const {data, error} = await sb.from('qdm_trend')
+      .select('week_key,cw_to,promozione,value_26,units_26').eq('anno',anno).range(0,9999);
+    if (error) { console.warn('qdm_trend:', error.message); return; }
+    trendState.cache = { anno, rows: data||[] };
+  }
+  const rows = trendState.cache.rows;
+  const n = v => Number(v) || 0;
+  const weeks = [...new Set(rows.map(r=>r.cw_to))].filter(w=>w!=null).sort((a,b)=>a-b);
+  if (!weeks.length) { document.getElementById('trendBlk').style.display='none'; return; }
+
+  // promo -> cw -> {v,u}  (PDE + PDE SERVICE accorpate)
+  const byPromo = {}, tot = {};
+  rows.forEach(r=>{
+    const p = TREND_PDE.includes(r.promozione) ? 'PDE' : r.promozione;
+    ((byPromo[p] ||= {})[r.cw_to] ||= {v:0,u:0});
+    byPromo[p][r.cw_to].v += n(r.value_26); byPromo[p][r.cw_to].u += n(r.units_26);
+    (tot[r.cw_to] ||= {v:0,u:0});
+    tot[r.cw_to].v += n(r.value_26); tot[r.cw_to].u += n(r.units_26);
+  });
+  const lastW = weeks[weeks.length-1];
+  const promos = Object.keys(byPromo).sort((a,b)=>(byPromo[b][lastW]?.v||0)-(byPromo[a][lastW]?.v||0));
+  if (!trendState.sel) {
+    const top = promos.filter(p=>p!=='PDE' && p!=='ALTRO').slice(0,3);
+    trendState.sel = new Set(['PDE', ...top].filter(p=>byPromo[p]));
+  }
+  const color = p => p==='PDE' ? '#00b4e8' : TREND_COLORS[promos.filter(x=>x!=='PDE').indexOf(p) % TREND_COLORS.length];
+
+  const {mis, mod} = trendState;
+  const prog = src => weeks.map(w => src[w] ? src[w][mis] : null);
+  // Singola week = differenza tra progressivi consecutivi (null se manca la week precedente)
+  const toWeek = arr => arr.map((x,i) => {
+    if (x==null) return null;
+    if (i===0) return weeks[0]===1 ? x : null;
+    if (weeks[i]-weeks[i-1]!==1 || arr[i-1]==null) return null;
+    return x - arr[i-1];
+  });
+  const totProg = prog(tot);
+  const serie = p => {
+    const a = prog(byPromo[p]||{});
+    if (mod==='qdm') return a.map((x,i)=> x!=null && totProg[i] ? +(x/totProg[i]*100).toFixed(2) : null);
+    return mod==='week' ? toWeek(a) : a;
+  };
+  const totSerie = mod==='week' ? toWeek(totProg) : totProg;
+
+  const fmtV = v => v==null ? '—' : (mod==='qdm' ? v.toLocaleString('it-IT',{minimumFractionDigits:2,maximumFractionDigits:2})+'%' : (mis==='v' ? '€'+fmtM(v) : fmtM(v)+' cp'));
+  const fmtT = v => v==null ? '—' : (mis==='v' ? '€'+fmtM(v) : fmtM(v)+' cp');
+
+  // KPI ultima week
+  const li = weeks.length-1;
+  const pdeP = prog(byPromo['PDE']||{});
+  const qPde = i => pdeP[i]!=null && totProg[i] ? pdeP[i]/totProg[i]*100 : null;
+  const pdeS = mod==='week' ? toWeek(pdeP) : pdeP;
+  const per = mod==='week' ? `CW${lastW} (sola week)` : `CW01→CW${lastW}`;
+  const dq = qPde(li)!=null && qPde(0)!=null ? qPde(li)-qPde(0) : null;
+  document.getElementById('trendKpis').innerHTML = `
+    <div class="mc"><div class="mc-lbl">Mercato · ${per}</div><div class="mc-val">${fmtT(totSerie[li])}</div>
+      <div class="mc-sub">${mod==='week' && li>0 ? 'CW'+weeks[li-1]+': '+fmtT(totSerie[li-1]) : 'totale da inizio anno'}</div></div>
+    <div class="mc"><div class="mc-lbl">PDE · ${per}</div><div class="mc-val" style="color:var(--accent)">${fmtT(pdeS[li])}</div>
+      <div class="mc-sub">${mod==='week' && li>0 ? 'CW'+weeks[li-1]+': '+fmtT(pdeS[li-1]) : ''}</div></div>
+    <div class="mc"><div class="mc-lbl">Quota PDE CW${lastW} (${mis==='v'?'valore':'copie'})</div>
+      <div class="mc-val">${qPde(li)!=null ? qPde(li).toLocaleString('it-IT',{minimumFractionDigits:2,maximumFractionDigits:2})+'%' : '—'}</div>
+      <div class="mc-delta ${dq>=0?'pos':'neg'}">${dq!=null ? (dq>=0?'+':'')+dq.toLocaleString('it-IT',{minimumFractionDigits:2,maximumFractionDigits:2})+' pp da CW'+weeks[0] : ''}</div></div>`;
+
+  // Chip promozioni
+  document.getElementById('trendChips').innerHTML = promos.map(p=>
+    `<span class="trend-chip${trendState.sel.has(p)?' on':''}" data-p="${p.replace(/"/g,'&quot;')}"><i style="background:${color(p)}"></i>${p}</span>`).join('');
+  document.querySelectorAll('#trendChips .trend-chip').forEach(el=>el.onclick=()=>{
+    const p = el.dataset.p; trendState.sel.has(p) ? trendState.sel.delete(p) : trendState.sel.add(p); buildTrendAnnuale();
+  });
+  document.querySelectorAll('#trendMis button, #trendMod button').forEach(b=>b.onclick=()=>{
+    const grp = b.parentElement.id==='trendMis' ? 'mis' : 'mod';
+    trendState[grp] = b.dataset.v;
+    b.parentElement.querySelectorAll('button').forEach(x=>x.classList.toggle('on', x===b));
+    buildTrendAnnuale();
+  });
+
+  document.getElementById('trendTitle').textContent = `Trend annuale ${anno} per promozione · ${weeks.length} week (CW${weeks[0]} → CW${lastW})`;
+  const gaps = weeks.slice(1).filter((w,i)=>w-weeks[i]!==1).length;
+  document.getElementById('trendNote').textContent =
+    (mod==='qdm' ? 'Quota di mercato progressiva di ogni promozione. ' : 'Barre = totale mercato (asse destro), linee = promozioni (asse sinistro). ')
+    + (mod==='week' ? 'Singola week = differenza tra due caricamenti progressivi consecutivi' + (gaps ? '; le week senza la precedente restano vuote.' : '.') : '');
+
+  const datasets = [];
+  if (mod!=='qdm') datasets.push({ type:'bar', label:'Totale mercato', data:totSerie, backgroundColor:cc('grid'), borderWidth:0, yAxisID:'y2', order:9, barPercentage:.75 });
+  promos.filter(p=>trendState.sel.has(p)).forEach(p=>datasets.push({
+    type:'line', label:p, data:serie(p), borderColor:color(p), backgroundColor:color(p),
+    borderWidth:p==='PDE'?3:1.75, pointRadius:p==='PDE'?3:0, pointHoverRadius:4, tension:.25, yAxisID:'y', order:1, spanGaps:false }));
+
+  const ctx = document.getElementById('trendChart');
+  if (trendChartInstance) { trendChartInstance.destroy(); trendChartInstance = null; }
+  trendChartInstance = new Chart(ctx, {
+    data:{ labels:weeks.map(w=>'CW'+String(w).padStart(2,'0')), datasets },
+    options:{
+      responsive:true, maintainAspectRatio:false, interaction:{mode:'index',intersect:false},
+      plugins:{ legend:{display:false}, tooltip:{ itemSort:(a,b)=>(b.parsed.y||0)-(a.parsed.y||0),
+        callbacks:{ label:c=>` ${c.dataset.label}: ${c.dataset.yAxisID==='y2' ? fmtT(c.parsed.y) : fmtV(c.parsed.y)}` } } },
+      scales:{
+        x:{ grid:{display:false}, ticks:{color:cc('t3'),font:{size:10}} },
+        y:{ position:'left', grid:{color:cc('grid')}, ticks:{color:cc('t2'),font:{size:10},callback:v=>mod==='qdm'?v+'%':fmtM(v)},
+            title:{display:true,text:mod==='qdm'?'Quota %':'Promozioni',color:cc('t3'),font:{size:10}} },
+        y2:{ display:mod!=='qdm', position:'right', grid:{display:false}, ticks:{color:cc('t3'),font:{size:10},callback:v=>fmtM(v)},
+            title:{display:true,text:'Totale mercato',color:cc('t3'),font:{size:10}} }
+      }
+    }
+  });
 }
 
 // ── PARI PERIMETRO / QUADRATURA ───────────────────────────────
@@ -1237,7 +1471,7 @@ function buildGeneriCombinato(pde, merc) {
       maintainAspectRatio: false,
       interaction: { mode:'index', axis:'y' },
       plugins: {
-        legend: { position:'top', labels:{ color:'#94a3b8', font:{size:11}, boxWidth:12 } },
+        legend: { position:'top', labels:{ color:cc('t2'), font:{size:11}, boxWidth:12 } },
         tooltip: { callbacks: {
           label: c => {
             const v = c.parsed.x;
@@ -1250,19 +1484,19 @@ function buildGeneriCombinato(pde, merc) {
         x: { display:false },
         yLeft: {
           type:'linear', position:'left',
-          grid:{ color:'rgba(42,48,69,0.6)' },
-          ticks:{ color:'#94a3b8', font:{size:10}, callback:v=>v+'%' },
-          title:{ display:true, text:'Val% 2026', color:'#64748b', font:{size:10} }
+          grid:{ color:cc('grid') },
+          ticks:{ color:cc('t2'), font:{size:10}, callback:v=>v+'%' },
+          title:{ display:true, text:'Val% 2026', color:cc('t3'), font:{size:10} }
         },
         yRight: {
           type:'linear', position:'right',
           grid:{ drawOnChartArea:false },
-          ticks:{ color:'#94a3b8', font:{size:10}, callback:v=>v+'%' },
-          title:{ display:true, text:'Δ% YoY', color:'#64748b', font:{size:10} }
+          ticks:{ color:cc('t2'), font:{size:10}, callback:v=>v+'%' },
+          title:{ display:true, text:'Δ% YoY', color:cc('t3'), font:{size:10} }
         },
         y: {
           grid:{ display:false },
-          ticks:{ color:'#e2e8f0', font:{size: isMob ? 9 : 11} }
+          ticks:{ color:cc('t1'), font:{size: isMob ? 9 : 11} }
         }
       }
     }
@@ -1301,13 +1535,13 @@ async function buildGeneriTrend(genre) {
       responsive:true, maintainAspectRatio:false,
       interaction:{ mode:'index' },
       plugins:{
-        legend:{ position:'top', labels:{ color:'#94a3b8', font:{size:11}, boxWidth:12 } },
+        legend:{ position:'top', labels:{ color:cc('t2'), font:{size:11}, boxWidth:12 } },
         tooltip:{ callbacks:{ label: c => c.parsed.y !== null ? `${c.dataset.label}: ${c.parsed.y.toFixed(2)}%` : null } }
       },
       scales:{
-        x:{ grid:{color:'rgba(42,48,69,0.5)'}, ticks:{color:'#64748b', font:{size:10}, maxRotation:35} },
-        yL:{ type:'linear', position:'left',  grid:{color:'rgba(42,48,69,0.5)'}, ticks:{color:'#94a3b8', font:{size:10}, callback:v=>v+'%'}, title:{display:true,text:'Val%',color:'#64748b',font:{size:10}} },
-        yR:{ type:'linear', position:'right', grid:{drawOnChartArea:false}, ticks:{color:'#94a3b8', font:{size:10}, callback:v=>v+'%'}, title:{display:true,text:'Δ% YoY',color:'#64748b',font:{size:10}} }
+        x:{ grid:{color:cc('grid2')}, ticks:{color:cc('t3'), font:{size:10}, maxRotation:35} },
+        yL:{ type:'linear', position:'left',  grid:{color:cc('grid2')}, ticks:{color:cc('t2'), font:{size:10}, callback:v=>v+'%'}, title:{display:true,text:'Val%',color:cc('t3'),font:{size:10}} },
+        yR:{ type:'linear', position:'right', grid:{drawOnChartArea:false}, ticks:{color:cc('t2'), font:{size:10}, callback:v=>v+'%'}, title:{display:true,text:'Δ% YoY',color:cc('t3'),font:{size:10}} }
       }
     }
   });
@@ -1480,6 +1714,7 @@ function toast(msg,type='ok'){const t=document.createElement('div');t.className=
 // Stesso pattern di Giro Manager: login/logout via fetch diretto,
 // token salvato in variabile locale. La sessione del SDK (PDE Hub) non viene toccata.
 let authToken = null;
+let authEmail = null;
 
 async function doLogin() {
   const email = document.getElementById('loginEmail').value.trim();
@@ -1503,6 +1738,7 @@ async function doLogin() {
       return;
     }
     authToken = data.access_token;
+    authEmail = data.user?.email || email;
     spin.style.display = 'none';
     showApp();
   } catch(e) {
@@ -1523,6 +1759,9 @@ async function doLogout() {
     } catch(e) { /* ignora errori di rete */ }
     authToken = null;
   }
+  authEmail = null;
+  document.getElementById('pwdBtn').style.display = 'none';
+  closePwd();
   document.getElementById('loginWrap').style.display = 'flex';
   document.getElementById('loginEmail').value = '';
   document.getElementById('loginPassword').value = '';
@@ -1537,7 +1776,76 @@ async function doLogout() {
 function showApp() {
   document.getElementById('loginWrap').style.display = 'none';
   document.getElementById('logoutBtn').style.display = 'block';
+  document.getElementById('pwdBtn').style.display = 'block';
 }
+
+// ── CAMBIA PASSWORD ──────────────────────────────────────────
+const PWD_FIELDS = ['pwdOld','pwdNew','pwdRep'];
+function openPwd() {
+  PWD_FIELDS.forEach(id => document.getElementById(id).value = '');
+  document.getElementById('pwdErr').style.display = 'none';
+  document.getElementById('pwdForm').style.display = 'block';
+  document.getElementById('pwdDone').style.display = 'none';
+  document.getElementById('pwdModal').style.display = 'flex';
+  document.getElementById('pwdOld').focus();
+}
+function closePwd() {
+  document.getElementById('pwdModal').style.display = 'none';
+  PWD_FIELDS.forEach(id => document.getElementById(id).value = '');
+}
+function pwdError(msg) {
+  const e = document.getElementById('pwdErr');
+  e.textContent = '⚠ ' + msg; e.style.display = 'block';
+}
+async function submitPwd() {
+  const vecchia = document.getElementById('pwdOld').value;
+  const nuova   = document.getElementById('pwdNew').value;
+  const ripeti  = document.getElementById('pwdRep').value;
+  document.getElementById('pwdErr').style.display = 'none';
+  if (!vecchia || !nuova || !ripeti) return pwdError('Compila tutti e tre i campi.');
+  if (nuova.length < 8) return pwdError('La nuova password deve avere almeno 8 caratteri.');
+  if (nuova !== ripeti) return pwdError('La nuova password e la ripetizione non coincidono.');
+  if (nuova === vecchia) return pwdError('La nuova password è uguale a quella vecchia.');
+
+  // email dell'utente: dal login di QDM o dalla sessione condivisa con il PDE Hub
+  let email = authEmail;
+  if (!email) { try { const { data } = await sb.auth.getSession(); email = data?.session?.user?.email; } catch(e) {} }
+  if (!email) return pwdError('Sessione scaduta: esci e accedi di nuovo.');
+
+  const spin = document.getElementById('pwdSpin');
+  const btns = ['pwdConfirm','pwdCancel'].map(id => document.getElementById(id));
+  spin.style.display = 'inline-block'; btns.forEach(b => b.disabled = true);
+  try {
+    // verifica della vecchia password con un login
+    const r1 = await fetch(`${SB_URL}/auth/v1/token?grant_type=password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': SB_KEY },
+      body: JSON.stringify({ email, password: vecchia }),
+    });
+    const v = await r1.json().catch(() => ({}));
+    if (!r1.ok || !v.access_token) { pwdError('La vecchia password non è corretta.'); return; }
+    const r2 = await fetch(`${SB_URL}/auth/v1/user`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'apikey': SB_KEY, 'Authorization': `Bearer ${v.access_token}` },
+      body: JSON.stringify({ password: nuova }),
+    });
+    if (!r2.ok) {
+      const j = await r2.json().catch(() => ({}));
+      pwdError(j.msg || j.message || j.error_description || 'Errore durante il cambio password.');
+      return;
+    }
+    PWD_FIELDS.forEach(id => document.getElementById(id).value = '');
+    document.getElementById('pwdForm').style.display = 'none';
+    document.getElementById('pwdDone').style.display = 'block';
+    document.getElementById('pwdOkBtn').focus();
+  } catch(e) {
+    pwdError('Errore di connessione: ' + e.message);
+  } finally {
+    spin.style.display = 'none'; btns.forEach(b => b.disabled = false);
+  }
+}
+PWD_FIELDS.forEach(id => document.getElementById(id).addEventListener('keydown', e => { if (e.key === 'Enter') submitPwd(); }));
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && document.getElementById('pwdModal').style.display === 'flex') closePwd(); });
 
 // ── INIT ─────────────────────────────────────────────────────
 (async()=>{
@@ -1566,13 +1874,13 @@ function showApp() {
     if (role === 'agente') {
       document.body.innerHTML = `
         <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;
-          background:#0b1128;font-family:Arial,sans-serif;text-align:center;padding:20px;">
+          background:var(--bg);font-family:Arial,sans-serif;text-align:center;padding:20px;">
           <div>
             <div style="font-size:48px;margin-bottom:16px;">🔒</div>
-            <h2 style="color:#fff;margin-bottom:8px;">Accesso non autorizzato</h2>
-            <p style="color:#7a9ab8;margin-bottom:24px;">Non hai i permessi per accedere a questa applicazione.</p>
+            <h2 style="color:var(--text);margin-bottom:8px;">Accesso non autorizzato</h2>
+            <p style="color:var(--text2);margin-bottom:24px;">Non hai i permessi per accedere a questa applicazione.</p>
             <a href="https://albertospde.github.io/pde-hub/"
-               style="background:#00b4e8;color:#fff;padding:10px 24px;border-radius:8px;
+               style="background:var(--accent);color:#fff;padding:10px 24px;border-radius:8px;
                text-decoration:none;font-weight:600;">← Torna a PDE Hub</a>
           </div>
         </div>`;
