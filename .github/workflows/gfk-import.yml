@@ -1,0 +1,50 @@
+name: Import automatico GfK
+
+# Ogni giovedì scarica dal portale GfK Book Insights i 6 report della settimana chiusa e li carica in QDM
+# (scripts/gfk-import.mjs). GitHub usa l'ora UTC: i passaggi delle 7:15–12:15 UTC coprono le 9–13 italiane
+# sia con l'ora legale sia con quella solare. Lo script parte solo dalle 9 italiane e si ferma appena la
+# settimana è in QDM, quindi i passaggi successivi non fanno nulla.
+on:
+  schedule:
+    - cron: "15 7-12 * * 4"
+  workflow_dispatch:
+    inputs:
+      settimana:
+        description: "Settimana da importare (es. 2026-43). Vuoto = ultima settimana chiusa"
+        required: false
+        default: ""
+      prova:
+        description: "Solo prova: confronta con i dati già in QDM senza salvare nulla"
+        type: boolean
+        default: false
+      forza:
+        description: "Reimporta anche se la settimana è già in QDM"
+        type: boolean
+        default: false
+
+concurrency:
+  group: gfk-import
+  cancel-in-progress: false
+
+jobs:
+  importa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Installa browser e lettore Excel
+        run: |
+          npm install --no-save --no-package-lock playwright@1.49.1 xlsx@0.18.5
+          npx playwright install --with-deps chromium
+      - name: Importa da GfK
+        run: node scripts/gfk-import.mjs
+        env:
+          QDM_GFK_CRON_KEY: ${{ secrets.QDM_GFK_CRON_KEY }}
+          GFK_USER: ${{ secrets.GFK_USER }}
+          GFK_PASSWORD: ${{ secrets.GFK_PASSWORD }}
+          SETTIMANA: ${{ github.event.inputs.settimana }}
+          PROVA: ${{ github.event.inputs.prova }}
+          FORZA: ${{ github.event.inputs.forza }}
