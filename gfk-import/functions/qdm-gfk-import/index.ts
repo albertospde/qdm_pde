@@ -2,7 +2,7 @@
 // Il job scarica ed elabora i 6 Excel GfK; questa funzione scrive soltanto, con i permessi di servizio.
 // POST con header x-cron-key (= app_secrets.qdm_gfk_cron), body { azione, ... }:
 //   stato       → ultima settimana caricata, elenco settimane, mappa editore → promozione
-//   upload_url  → { tipo } → URL firmato per salvare l'Excel in storage qdm-gfk/ultima/<tipo>.xlsx
+//   upload_url  → { tipo, cartella? } → URL firmato per salvare l'Excel in storage qdm-gfk/ultima/<tipo>.xlsx (o prova/)
 //   leggi       → { week_key, tabella, offset } → righe già salvate (per la prova di confronto)
 //   pulisci     → { week_key } → cancella recap/trend/generi/top20 di quella settimana
 //   scrivi      → { week_key, tabella, righe } → inserisce righe di quella settimana
@@ -67,7 +67,8 @@ async function azione(body: any) {
     }
     case "upload_url": {
       if (!TIPI.includes(body.tipo)) throw new Error("tipo non valido");
-      const { data, error } = await admin.storage.from("qdm-gfk").createSignedUploadUrl(`ultima/${body.tipo}.xlsx`, { upsert: true });
+      const cartella = body.cartella === "prova" ? "prova" : "ultima";   // la prova non tocca gli Excel usati dall'app
+      const { data, error } = await admin.storage.from("qdm-gfk").createSignedUploadUrl(`${cartella}/${body.tipo}.xlsx`, { upsert: true });
       if (error) throw new Error("Errore upload_url: " + error.message);
       return { url: data.signedUrl };
     }

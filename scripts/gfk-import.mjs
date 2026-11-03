@@ -286,9 +286,9 @@ async function prova(calc) {
 }
 
 // ── salvataggio ───────────────────────────────────────────────
-async function salva(calc, files) {
+async function salvaExcel(files, cartella) {
   for (const tipo of core.TIPI) {
-    const { url } = await fn("upload_url", { tipo });
+    const { url } = await fn("upload_url", { tipo, cartella });
     const res = await fetch(url, {
       method: "PUT",
       headers: { "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "x-upsert": "true" },
@@ -296,6 +296,10 @@ async function salva(calc, files) {
     });
     if (!res.ok) throw new Error(`Salvataggio Excel ${tipo}: ${res.status}`);
   }
+}
+
+async function salva(calc, files) {
+  await salvaExcel(files, "ultima");
   const wk = calc.weekKey;
   await fn("pulisci", { week_key: wk });
   for (const [tabella, righe] of [["qdm_recap", calc.recap], ["qdm_trend", calc.trend], ["qdm_generi", calc.generi], ["qdm_top20", calc.top20]]) {
@@ -339,6 +343,7 @@ async function main() {
   const dettagli = { righe, file_byte: dimensioni, filtro_pde: scarico.filtro.preset, editori_filtro_pde: scarico.filtro.nEditori, secondi: Math.round((Date.now() - t0) / 1000) };
 
   if (PROVA) {
+    await salvaExcel(scarico.files, "prova");   // per poterli confrontare a mano con quelli caricati in QDM
     const esiti = await prova(calc);
     esiti.forEach(e => console.log(`Confronto ${e.tabella}: ${e.nuove} nuove / ${e.db} in QDM · mancanti ${e.mancanti} · diverse ${e.diverse} · scarto max ${e.maxRel.toExponential(1)}`));
     const uguale = esiti.every(e => e.nuove === e.db && !e.mancanti && !e.diverse);
