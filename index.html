@@ -848,7 +848,7 @@ function buildMappatura() {
     <div class="blk-hdr"><span class="blk-title">Mappatura editori → promozione</span><span style="font-size:10px;color:var(--text3)" id="mapConta"></span></div>
     <div id="mapRicalcola"></div>
     <div class="map-tools">
-      <input class="map-in" id="mapCerca" placeholder="🔍 Cerca editore…" oninput="disegnaEditori()" style="min-width:220px">
+      <input class="map-in" id="mapCerca" placeholder="🔍 Cerca editore…" oninput="clearTimeout(mappa.cerca); mappa.cerca = setTimeout(disegnaEditori, 200)" style="min-width:220px">
       <select class="map-in" id="mapFiltro" onchange="disegnaEditori()"></select>
       <label class="map-chk"><input type="checkbox" id="mapVendite" onchange="disegnaEditori()" checked> solo editori con vendite nell'ultima settimana</label>
     </div>
@@ -973,19 +973,28 @@ function disegnaEditori() {
     (!soloVendite || v[e]) &&
     (!filtro || (filtro === '__NM' ? !dbPromo[e] : dbPromo[e] === filtro)));
   lista.sort((a, b) => ((v[b] || 0) - (v[a] || 0)) || a.localeCompare(b, 'it'));
-  const totale = lista.length;
-  lista = lista.slice(0, 300);
   mappa.lista = lista;
   document.getElementById('mapConta').textContent = `${Object.keys(dbPromo).length.toLocaleString('it-IT')} editori mappati`;
-  const opz = cur => (cur && !PROMOZIONI.includes(cur) ? `<option value="${escH(cur)}" selected>${escH(cur)} (non in elenco)</option>` : '') +
-    (!cur ? `<option value="" selected>— non mappato (conta in ALTRO) —</option>` : '') +
-    PROMOZIONI.map(p => `<option value="${escH(p)}" ${p === cur ? 'selected' : ''}>${escH(p)}</option>`).join('');
+  // Con migliaia di righe ogni tendina parte con la sola voce attuale e si riempie al primo clic (riempiTendina)
+  const opz = cur => cur
+    ? `<option value="${escH(cur)}" selected>${escH(cur)}${PROMOZIONI.includes(cur) ? '' : ' (non in elenco)'}</option>`
+    : `<option value="" selected>— non mappato (conta in ALTRO) —</option>`;
   tab.innerHTML = `<thead><tr><th class="l">Editore (nome GfK)</th><th>Vendite ${escH(mappa.periodo || '')}</th><th class="l">Promozione</th></tr></thead>
     <tbody>${lista.map((e, i) => `<tr><td class="l">${escH(e)}</td><td>${v[e] ? fmtVendite(v[e]) : '—'}</td>
-      <td class="l"><select class="map-in" data-i="${i}" onchange="salvaMappa(this)">${opz(dbPromo[e])}</select></td></tr>`).join('')}</tbody>`;
-  document.getElementById('mapNota').textContent = totale > 300
-    ? `Mostrati i primi 300 di ${totale.toLocaleString('it-IT')} (i più venduti): usa la ricerca per trovare gli altri.`
-    : (totale ? '' : 'Nessun editore con questi filtri.');
+      <td class="l"><select class="map-in" data-i="${i}" onmousedown="riempiTendina(this)" onfocus="riempiTendina(this)" onchange="salvaMappa(this)">${opz(dbPromo[e])}</select></td></tr>`).join('')}</tbody>`;
+  document.getElementById('mapNota').textContent = lista.length
+    ? `${lista.length.toLocaleString('it-IT')} editori${soloVendite ? ' con vendite' : ''}, dal più venduto.`
+    : 'Nessun editore con questi filtri.';
+}
+
+function riempiTendina(sel) {
+  if (sel.dataset.piena) return;
+  sel.dataset.piena = '1';
+  const cur = sel.value;
+  sel.innerHTML = (cur && !PROMOZIONI.includes(cur) ? `<option value="${escH(cur)}">${escH(cur)} (non in elenco)</option>` : '') +
+    (!cur ? `<option value="">— non mappato (conta in ALTRO) —</option>` : '') +
+    PROMOZIONI.map(p => `<option value="${escH(p)}">${escH(p)}</option>`).join('');
+  sel.value = cur;
 }
 
 async function salvaMappa(el) {
