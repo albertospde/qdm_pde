@@ -58,7 +58,7 @@ async function azione(body: any) {
       if (error) throw new Error("Errore settimane: " + error.message);
       const promo: Record<string, string> = {};
       for (let da = 0; ; da += 1000) {
-        const { data, error: e } = await admin.from("editore_promozione").select("editore_gfk, promo_2026").range(da, da + 999);
+        const { data, error: e } = await admin.from("editore_promozione").select("editore_gfk, promo_2026").order("editore_gfk").range(da, da + 999);
         if (e) throw new Error("Errore editore_promozione: " + e.message);
         (data || []).forEach(r => { promo[r.editore_gfk] = r.promo_2026; });
         if (!data || data.length < 1000) break;

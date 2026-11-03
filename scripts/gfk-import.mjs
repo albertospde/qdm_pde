@@ -258,20 +258,26 @@ function confronta(nome, nuove, db, chiave) {
   const campi = Object.keys(nuove[0] || {}).filter(k => !["week_key", "updated_at"].includes(k));
   const mappa = new Map(db.map(r => [chiave(r), r]));
   let diverse = 0, mancanti = 0, maxRel = 0;
+  const esempi = [];   // solo nel log privato (qdm_import_log), non nei log pubblici di GitHub
   for (const n of nuove) {
     const d = mappa.get(chiave(n));
     if (!d) { mancanti++; continue; }
     let diff = false;
     for (const c of campi) {
+      let questo = false;
       if (typeof n[c] === "number") {
         const rel = Math.abs(n[c] - Number(d[c])) / Math.max(1, Math.abs(Number(d[c])));
         maxRel = Math.max(maxRel, rel);
-        if (rel > 1e-9) diff = true;
-      } else if (String(n[c] ?? "") !== String(d[c] ?? "")) diff = true;
+        questo = rel > 1e-9;
+      } else questo = String(n[c] ?? "") !== String(d[c] ?? "");
+      if (questo) {
+        diff = true;
+        if (esempi.length < 12) esempi.push({ chiave: chiave(n), campo: c, nuovo: n[c], qdm: d[c] });
+      }
     }
     if (diff) diverse++;
   }
-  return { tabella: nome, nuove: nuove.length, db: db.length, mancanti, diverse, maxRel };
+  return { tabella: nome, nuove: nuove.length, db: db.length, mancanti, diverse, maxRel, esempi };
 }
 
 async function prova(calc) {
