@@ -138,8 +138,15 @@ async function apri(page, url) {
   }
   if (!r) throw new Error("Il portale GfK non ha caricato il report");
   if (!r.ok()) throw new Error(`Report GfK non disponibile (${r.status()})`);
-  await page.locator(".export--excel button").first().waitFor({ state: "visible", timeout: 60000 });
-  return r.json().catch(() => null);
+  const json = await r.json().catch(() => null);
+  // la pagina mostra o il pulsante EXCEL (ci sono dati) o "This query returns no result"
+  const atteso = (loc, valore) => loc.first().waitFor({ state: "visible", timeout: 60000 }).then(() => valore, () => null);
+  const esito = await Promise.race([
+    atteso(page.locator(".export--excel button"), "dati"),
+    atteso(page.getByText(/this query returns no result/i), "vuoto"),
+  ]) ?? null;
+  if (!esito) throw new Error("La pagina del report non mostra né i dati né il pulsante EXCEL");
+  return { json, vuoto: esito === "vuoto" || righeDati(json) === 0 };
 }
 
 // Pulsante EXCEL → finestra "numero risultati" → 10.000 → conferma → file scaricato
@@ -190,24 +197,23 @@ async function scaricaTutto(target) {
     FASE = "login GfK";
     await entra(page);
 
-    // Dati della settimana già pubblicati? Lo dice il primo report (editori anno corrente)
-    FASE = "report gfk2026";
-    const primo = await apri(page, r.gfk2026);
-    const n = righeDati(primo);
-    if (n === 0) return { disponibili: false };
-    FASE = "export gfk2026";
-    files.gfk2026 = await esporta(page);
+    // Dati della settimana già pubblicati? Lo dice la top titoli della SOLA settimana: i report
+    // progressivi (CW01–CWnn) rispondono anche quando la CWnn non è ancora uscita, con i dati fino alla CWnn-1
+    FASE = "report top20week";
+    if ((await apri(page, r.top20week)).vuoto) return { disponibili: false };
+    FASE = "export top20week";
+    files.top20week = await esporta(page);
 
-    for (const tipo of ["gfk2025", "top20week", "top20tot", "generiMercato"]) {
+    for (const tipo of ["gfk2026", "gfk2025", "top20tot", "generiMercato"]) {
       FASE = `report ${tipo}`;
-      await apri(page, r[tipo]);
+      if ((await apri(page, r[tipo])).vuoto) throw new Error(`Il report ${tipo} non ha dati`);
       FASE = `export ${tipo}`;
       files[tipo] = await esporta(page);
     }
     FASE = "filtro PDE PERIMETRO";
     filtro = await editoriPDE(page, r.generiMercato, target.anno);
     FASE = "report generiPDE";
-    await apri(page, r.generiPDE(filtro.pu));
+    if ((await apri(page, r.generiPDE(filtro.pu))).vuoto) throw new Error("Il report generiPDE non ha dati");
     FASE = "export generiPDE";
     files.generiPDE = await esporta(page);
     return { disponibili: true, files, filtro };
@@ -333,7 +339,7 @@ async function main() {
   const scarico = await scaricaTutto(target);
   if (!scarico.disponibili) {
     console.log("GfK non ha ancora pubblicato i dati della settimana.");
-    if (ora >= ORA_ULTIMO || FORZA || PROVA) await fn("log", { stato: "nessun_dato", week_key: weekKey, messaggio: `Alle ${ora} GfK non ha ancora pubblicato la ${weekKey.slice(5)}` });
+    if (ora >= ORA_ULTIMO || FORZA || PROVA) await fn("log", { stato: "nessun_dato", week_key: weekKey, messaggio: `GfK non ha ancora pubblicato la CW${due(target.cw)} ${target.anno} (esce il giovedì mattina)` });
     return;
   }
   const dimensioni = Object.fromEntries(Object.entries(scarico.files).map(([k, v]) => [k, v.length]));
