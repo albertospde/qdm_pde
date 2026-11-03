@@ -102,6 +102,15 @@ function reportDaScaricare({ anno, cw }) {
 
 // ── portale GfK ───────────────────────────────────────────────
 const RANKING = /biapi\.gfk-e\.com\/v\d\/bookint\.it\/(publisher|genre|product)\/ranking/;
+let FASE = "avvio";      // passo in corso, finisce nel log se qualcosa va storto
+let DIAGNOSI = null;     // indirizzo e testo della pagina al momento dell'errore (solo nel log privato)
+
+async function diagnosi(page) {
+  try {
+    const testo = await page.locator("body").innerText({ timeout: 5000 });
+    return { url: page.url().slice(0, 300), titolo: await page.title(), testo: testo.replace(/\s+/g, " ").slice(0, 800) };
+  } catch { return { url: page.url().slice(0, 300) }; }
+}
 
 async function entra(page) {
   await page.goto(`${GFK}/signin`, { waitUntil: "domcontentloaded" });
@@ -112,14 +121,22 @@ async function entra(page) {
     page.locator('form.sign__form [type="submit"], form.sign__form button').first().click(),
   ]);
   if (!/\/bookint\.it\//.test(page.url())) throw new Error("Login GfK non riuscito: controllare GFK_USER / GFK_PASSWORD");
-  await page.waitForLoadState("load").catch(() => {});
+  // aspetta che l'app del portale sia pronta (pagina iniziale con la cronologia)
+  await page.getByText(/recently visited pages/i).first().waitFor({ state: "visible", timeout: 90000 }).catch(() => {});
+  await page.waitForTimeout(2000);
 }
 
 // Apre un report e aspetta i dati che la pagina stessa chiede al portale
 async function apri(page, url) {
-  const risposta = page.waitForResponse(r => RANKING.test(r.url()) && r.request().method() === "POST", { timeout: 180000 });
-  await page.goto(url);
-  const r = await risposta;
+  const hash = "#" + url.split("#")[1];
+  let r = null;
+  for (let tentativo = 1; tentativo <= 2 && !r; tentativo++) {
+    const risposta = page.waitForResponse(x => RANKING.test(x.url()), { timeout: 90000 }).catch(() => null);
+    if (tentativo === 1) await page.evaluate(h => { window.location.hash = h; }, hash);   // come cliccare un link nel portale
+    else { await page.goto(url, { waitUntil: "load" }); await page.reload({ waitUntil: "load" }); }
+    r = await risposta;
+  }
+  if (!r) throw new Error("Il portale GfK non ha caricato il report");
   if (!r.ok()) throw new Error(`Report GfK non disponibile (${r.status()})`);
   await page.locator(".export--excel button").first().waitFor({ state: "visible", timeout: 60000 });
   return r.json().catch(() => null);
@@ -149,7 +166,7 @@ async function editoriPDE(page, urlGeneri, anno) {
   const nomi = (await voci.allInnerTexts()).map(t => t.trim().toUpperCase());
   const anni = [...new Set(nomi.map(n => +n.match(/\d{4}/)[0]))].sort((x, y) => y - x);
   const scelto = anni.includes(anno) ? anno : anni[0];
-  const risposta = page.waitForResponse(r => RANKING.test(r.url()) && r.request().method() === "POST", { timeout: 180000 });
+  const risposta = page.waitForResponse(r => RANKING.test(r.url()), { timeout: 120000 });
   await voci.filter({ hasText: new RegExp(`PDE PERIMETRO ${scelto}`, "i") }).last().click();
   await risposta;
   const pu = new URL(page.url().replace("/#/", "/")).searchParams.get("pu");
@@ -170,22 +187,33 @@ async function scaricaTutto(target) {
   const files = {};
   let filtro = null;
   try {
+    FASE = "login GfK";
     await entra(page);
 
     // Dati della settimana già pubblicati? Lo dice il primo report (editori anno corrente)
+    FASE = "report gfk2026";
     const primo = await apri(page, r.gfk2026);
     const n = righeDati(primo);
     if (n === 0) return { disponibili: false };
+    FASE = "export gfk2026";
     files.gfk2026 = await esporta(page);
 
     for (const tipo of ["gfk2025", "top20week", "top20tot", "generiMercato"]) {
+      FASE = `report ${tipo}`;
       await apri(page, r[tipo]);
+      FASE = `export ${tipo}`;
       files[tipo] = await esporta(page);
     }
+    FASE = "filtro PDE PERIMETRO";
     filtro = await editoriPDE(page, r.generiMercato, target.anno);
+    FASE = "report generiPDE";
     await apri(page, r.generiPDE(filtro.pu));
+    FASE = "export generiPDE";
     files.generiPDE = await esporta(page);
     return { disponibili: true, files, filtro };
+  } catch (e) {
+    DIAGNOSI = await diagnosi(page);
+    throw e;
   } finally {
     await page.goto(`${GFK}/bookint.it/signout`).catch(() => {});   // libera la sessione GfK
     await browser.close();
@@ -301,6 +329,7 @@ async function main() {
   const dimensioni = Object.fromEntries(Object.entries(scarico.files).map(([k, v]) => [k, v.length]));
   console.log("Excel scaricati (byte):", JSON.stringify(dimensioni), `· filtro ${scarico.filtro.preset}: ${scarico.filtro.nEditori} editori`);
 
+  FASE = "lettura Excel";
   const rec = leggiEControlla(scarico.files, target);
   const calc = core.calcolaSettimana(rec, stato.promo);
   if (calc.weekKey !== weekKey) throw new Error(`Settimana dei file ${calc.weekKey} invece di ${weekKey}`);
@@ -318,6 +347,7 @@ async function main() {
     return;
   }
 
+  FASE = "salvataggio";
   await salva(calc, scarico.files);
   await fn("chiudi", {
     settimana: calc.settimana,
@@ -333,7 +363,7 @@ async function main() {
 
 main().catch(async e => {
   const msg = e instanceof Error ? e.message : String(e);
-  console.error("ERRORE:", msg);
-  try { if (CRON_KEY) await fn("log", { stato: "errore", week_key: null, messaggio: msg.slice(0, 500) }); } catch { /* ignora */ }
+  console.error(`ERRORE (${FASE}):`, msg);
+  try { if (CRON_KEY) await fn("log", { stato: "errore", week_key: null, messaggio: `${FASE}: ${msg}`.slice(0, 500), dettagli: { fase: FASE, pagina: DIAGNOSI } }); } catch { /* ignora */ }
   process.exit(1);
 });
