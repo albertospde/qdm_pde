@@ -765,8 +765,9 @@ async function openGfkModal() {
   const {data} = await sb.from('qdm_settimane').select('week_key').order('anno',{ascending:false}).order('cw_to',{ascending:false});
   const sett = (data || []).map(w => w.week_key);
   const comeInput = wk => { const m = wk.match(/^(\d{4})_CW\d+-CW(\d+)$/); return m ? `${m[1]}-${+m[2]}` : ''; };
-  sel.innerHTML = `<option value="">Ultima settimana chiusa</option>` +
+  sel.innerHTML = `<option value="">Settimana nuova (GfK la pubblica il giovedì)</option>` +
     sett.map(wk => `<option value="${comeInput(wk)}">${wk.replace('_', ' ')}</option>`).join('');
+  if (sett.length) sel.value = comeInput(sett[0]);   // di solito si riaggiorna l'ultima settimana caricata
   document.getElementById('gfkErr').style.display = 'none';
   document.getElementById('gfkModal').style.display = 'flex';
 }
