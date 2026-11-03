@@ -60,6 +60,15 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14
 .main{padding:24px;}
 .gfk-bar{margin:16px 24px 0;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--yellow);border-radius:8px;font-size:12px;color:var(--text2);display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
 .gfk-bar.err{border-left-color:var(--red);}
+.map-tools{padding:12px 16px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;border-bottom:1px solid var(--border);}
+.map-in{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:6px 10px;border-radius:6px;font-size:12px;font-family:var(--sans);outline:none;}
+.map-in:focus{border-color:var(--accent);}
+.map-chk{font-size:12px;color:var(--text2);display:flex;align-items:center;gap:6px;cursor:pointer;}
+.map-note{padding:10px 16px;font-size:12px;color:var(--text3);}
+.map-avviso{margin:12px 16px 0;padding:10px 14px;border:1px solid var(--border);border-left:3px solid var(--yellow);border-radius:8px;font-size:12px;color:var(--text2);display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+.map-avviso .btn{padding:5px 12px;font-size:12px;margin-left:auto;}
+#mapTab td .map-in, #promoTab td .map-in{width:100%;min-width:180px;}
+#promoTab td.c, #mapTab td.c{text-align:center;}
 .gfk-bar.info{border-left-color:var(--accent);}
 .gfk-bar b{color:var(--text);font-weight:600;}
 .gfk-bar .btn{padding:5px 12px;font-size:12px;margin-left:auto;}
@@ -367,6 +376,7 @@ html[data-theme="light"] .rank-b.b{background:rgba(180,120,60,.12);color:#9a5b1f
   <div class="tab" onclick="showTab('quad')">Quadratura</div>
   <div class="tab" onclick="showTab('generi')">Generi</div>
   <div class="tab" onclick="showTab('top20')">Top 20</div>
+  <div class="tab" onclick="showTab('mappa')">⚙ Mappatura</div>
 </div>
 
 <div class="gfk-bar" id="gfkBar" style="display:none"></div>
@@ -469,7 +479,7 @@ const SB_URL = 'https://tdflwenlylhctxssatax.supabase.co';
 const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRkZmx3ZW5seWxoY3R4c3NhdGF4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYzMzgyNzYsImV4cCI6MjA5MTkxNDI3Nn0.l35qEL7LOvyYuI1McQlVqj4vbyTqmlevcmqWbTGYi2Q';
 const sb = window.supabase.createClient(SB_URL, SB_KEY);
 
-const PROMOZIONI = ['ALTRO','AMAZON','BIBLIOMANIE PROMOBIGS','CORRAINI','DIFFUSIONE SAN PAOLO',
+let PROMOZIONI = ['ALTRO','AMAZON','BIBLIOMANIE PROMOBIGS','CORRAINI','DIFFUSIONE SAN PAOLO',
   'DISTRIBOOK','EDISES SRL','EDIZ. MEDICO SCIENTIFICHE','EMME PROMOZIONE','FELTRINELLI',
   'FRANCO ANGELI','GIAPPICHELLI','GIUFFRE','GIUNTI','GRIBAUDI',"L'IPPOCAMPO",'LATERZA',
   'LISCIANI','LOESCHER','LOGOS','LYR S.R.L. / ALI+LIBROMANIA','MACRO GRUPPO EDITORIALE SRL',
@@ -477,7 +487,7 @@ const PROMOZIONI = ['ALTRO','AMAZON','BIBLIOMANIE PROMOBIGS','CORRAINI','DIFFUSI
   'PDE SERVICE','PDE SERVIZI COMM. PER EDITORIA','PEA ITALIA','PEARSON ITALIA SPA','PROLIBRO',
   'PROMEDI','PROMEDIA ITALIA SERVICE','PROMOCOMIX','RAFFAELLO','SIMONE','TASCHEN','ZANICHELLI'];
 
-const GRUPPI = {
+let GRUPPI = {
   'GRANDI GRUPPI': ['MONDADORI','PROLIBRO','GIUNTI','FELTRINELLI'],
   'PDE + PDE SERVICE': ['PDE SERVIZI COMM. PER EDITORIA','PDE SERVICE'],
   'PROMEDI + NW': ['PROMEDI','NW CONSULENZA MARKETING EDIT.'],
@@ -805,6 +815,203 @@ async function rielaboraDaGfk() {
   }
 }
 
+// ── PROMOZIONI (tabella qdm_promozioni; se non c'è ancora restano gli elenchi qui sopra) ──
+let promoTabella = false;
+let PROMO_INFO = null;
+
+async function loadPromozioni() {
+  const {data, error} = await sb.from('qdm_promozioni').select('id,nome,gruppo,pde,ordine').order('nome');
+  if (error || !data?.length) { promoTabella = false; return; }
+  promoTabella = true;
+  PROMO_INFO = data;
+  PROMOZIONI = data.map(r => r.nome).sort((a,b) => a.localeCompare(b,'it'));
+  const gruppi = {};
+  [...data].sort((a,b) => (a.ordine-b.ordine) || a.nome.localeCompare(b.nome,'it'))
+    .forEach(r => { if (r.gruppo) (gruppi[r.gruppo] ??= []).push(r.nome); });
+  GRUPPI = gruppi;
+  TREND_PDE = data.filter(r => r.pde).map(r => r.nome);
+  PDE_PROMOS = new Set(TREND_PDE);
+}
+
+// ── SCHEDA MAPPATURA: promozioni + editori → promozione ──────
+const mappa = { vendite: null, periodo: '', lista: [], cambiate: 0 };
+const escH = t => String(t ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmtVendite = v => '€' + Math.round(v).toLocaleString('it-IT');
+
+function buildMappatura() {
+  return `
+  <div class="blk">
+    <div class="blk-hdr"><span class="blk-title">Promozioni</span><span style="font-size:10px;color:var(--text3)" id="promoConta"></span></div>
+    <div id="promoSez"><div class="map-note"><span class="spin"></span> Carico…</div></div>
+  </div>
+  <div class="blk">
+    <div class="blk-hdr"><span class="blk-title">Mappatura editori → promozione</span><span style="font-size:10px;color:var(--text3)" id="mapConta"></span></div>
+    <div id="mapRicalcola"></div>
+    <div class="map-tools">
+      <input class="map-in" id="mapCerca" placeholder="🔍 Cerca editore…" oninput="disegnaEditori()" style="min-width:220px">
+      <select class="map-in" id="mapFiltro" onchange="disegnaEditori()"></select>
+      <label class="map-chk"><input type="checkbox" id="mapVendite" onchange="disegnaEditori()" checked> solo editori con vendite nell'ultima settimana</label>
+    </div>
+    <div class="tbl-wrap"><table id="mapTab"></table></div>
+    <div class="map-note" id="mapNota"></div>
+  </div>`;
+}
+
+async function initMappatura() {
+  await Promise.all([loadDBPromo(), loadPromozioni()]);
+  if (!mappa.vendite) {
+    // vendite per editore dall'ultimo Excel GfK scaricato in automatico
+    try {
+      const {data, error} = await sb.storage.from('qdm-gfk').download('ultima/gfk2026.xlsx');
+      if (error) throw error;
+      const p = parseGFK(await data.arrayBuffer());
+      mappa.periodo = p.meta['Period'] || '';
+      mappa.vendite = {};
+      p.rows.forEach(r => {
+        const e = r['Publisher'];
+        if (e && String(e).toLowerCase() !== 'total' && String(r['Rank']).toLowerCase() !== 'total')
+          mappa.vendite[e] = (mappa.vendite[e] || 0) + (Number(r['Value']) || 0);
+      });
+    } catch(e) { mappa.vendite = {}; }
+  }
+  disegnaPromozioni();
+  const f = document.getElementById('mapFiltro');
+  f.innerHTML = `<option value="">Tutte le promozioni</option><option value="__NM">— non mappati —</option>` +
+    PROMOZIONI.map(p => `<option value="${escH(p)}">${escH(p)}</option>`).join('');
+  disegnaEditori();
+}
+
+function contaEditori() {
+  const c = {};
+  Object.values(dbPromo).forEach(p => { c[p] = (c[p] || 0) + 1; });
+  return c;
+}
+
+function disegnaPromozioni() {
+  const box = document.getElementById('promoSez');
+  if (!box) return;
+  const conta = contaEditori();
+  const info = PROMO_INFO || PROMOZIONI.map(nome => ({ nome, gruppo: Object.keys(GRUPPI).find(g => GRUPPI[g].includes(nome)) || '', pde: PDE_PROMOS.has(nome) }));
+  const gruppi = [...new Set(info.map(r => r.gruppo).filter(Boolean))];
+  document.getElementById('promoConta').textContent = `${info.length} promozioni`;
+  const fuori = Object.keys(conta).filter(p => !PROMOZIONI.includes(p));
+  const ro = promoTabella ? '' : 'disabled';
+  box.innerHTML = `
+    ${promoTabella ? '' : `<div class="map-avviso">ⓘ <span>Rinomina, gruppi e nuove promozioni si attivano dopo l'aggiornamento del database. La mappatura degli editori qui sotto funziona già.</span></div>`}
+    ${fuori.length ? `<div class="map-avviso">⚠ <span>Promozioni scritte nella mappatura ma non in elenco: ${fuori.map(p => `<b>${escH(p)}</b> (${conta[p]} editori)`).join(', ')}.</span>
+      <select class="map-in" id="fuoriDa">${fuori.map(p => `<option value="${escH(p)}">${escH(p)}</option>`).join('')}</select> →
+      <select class="map-in" id="fuoriA">${PROMOZIONI.map(p => `<option value="${escH(p)}">${escH(p)}</option>`).join('')}</select>
+      <button class="btn btn-primary" onclick="spostaPromo()">Sposta gli editori</button></div>` : ''}
+    <div class="tbl-wrap"><table id="promoTab">
+      <thead><tr><th class="l">Nome promozione</th><th class="l">Gruppo nel grafico "Quote per gruppo"</th><th>PDE</th><th>Editori</th></tr></thead>
+      <tbody>${info.map((r, i) => `<tr>
+        <td class="l"><input class="map-in" value="${escH(r.nome)}" data-i="${i}" onchange="rinominaPromo(this)" ${ro} title="Cambia il nome: vale anche per i dati già caricati"></td>
+        <td class="l"><input class="map-in" list="gruppiLista" value="${escH(r.gruppo || '')}" data-i="${i}" onchange="salvaPromo(this,'gruppo')" ${ro} placeholder="nessun gruppo"></td>
+        <td class="c"><input type="checkbox" ${r.pde ? 'checked' : ''} data-i="${i}" onchange="salvaPromo(this,'pde')" ${ro}></td>
+        <td>${(conta[r.nome] || 0).toLocaleString('it-IT')}</td></tr>`).join('')}</tbody>
+    </table></div>
+    <datalist id="gruppiLista">${gruppi.map(g => `<option value="${escH(g)}">`).join('')}</datalist>
+    ${promoTabella ? `<div class="map-tools" style="border-bottom:none;border-top:1px solid var(--border)">
+      <input class="map-in" id="promoNuova" placeholder="Nome nuova promozione" style="min-width:260px">
+      <button class="btn btn-primary" style="padding:5px 12px;font-size:12px" onclick="aggiungiPromo()">+ Aggiungi promozione</button></div>` : ''}`;
+}
+
+async function rinominaPromo(el) {
+  const vecchio = PROMO_INFO[+el.dataset.i].nome;
+  const nuovo = el.value.trim().toUpperCase();
+  if (!nuovo || nuovo === vecchio) { el.value = vecchio; return; }
+  if (!confirm(`Rinominare "${vecchio}" in "${nuovo}"?\nCambia anche nella mappatura degli editori e nei dati già caricati (recap, trend, top 20).`)) { el.value = vecchio; return; }
+  const {data, error} = await sb.rpc('qdm_rinomina_promozione', { p_vecchio: vecchio, p_nuovo: nuovo });
+  if (error) { toast('Errore: ' + error.message, 'err'); el.value = vecchio; return; }
+  toast('✓ ' + data, 'ok');
+  if (top20Promo === vecchio) top20Promo = nuovo;
+  await Promise.all([loadDBPromo(), loadPromozioni()]);
+  disegnaPromozioni(); disegnaEditori();
+  if (currentWeekKey) loadWeek(currentWeekKey).then(() => showTab('mappa'));
+}
+
+async function salvaPromo(el, campo) {
+  const r = PROMO_INFO[+el.dataset.i];
+  const val = campo === 'pde' ? el.checked : (el.value.trim().toUpperCase() || null);
+  const {error} = await sb.from('qdm_promozioni').update({ [campo]: val }).eq('id', r.id);
+  if (error) { toast('Errore: ' + error.message, 'err'); return; }
+  toast(`✓ ${r.nome}: ${campo === 'pde' ? (val ? 'segnata come PDE' : 'non più PDE') : (val ? 'gruppo ' + val : 'nessun gruppo')}`, 'ok');
+  await loadPromozioni();
+  disegnaPromozioni();
+}
+
+async function aggiungiPromo() {
+  const nome = document.getElementById('promoNuova').value.trim().toUpperCase();
+  if (!nome) return;
+  const {error} = await sb.from('qdm_promozioni').insert({ nome });
+  if (error) { toast('Errore: ' + (error.code === '23505' ? 'esiste già' : error.message), 'err'); return; }
+  toast(`✓ Promozione ${nome} aggiunta`, 'ok');
+  await loadPromozioni();
+  initMappatura();
+}
+
+async function spostaPromo() {
+  const da = document.getElementById('fuoriDa').value, a = document.getElementById('fuoriA').value;
+  if (!confirm(`Spostare tutti gli editori di "${da}" in "${a}"?`)) return;
+  const {error} = await sb.from('editore_promozione').update({ promo_2026: a, updated_at: new Date().toISOString() }).eq('promo_2026', da);
+  if (error) { toast('Errore: ' + error.message, 'err'); return; }
+  Object.keys(dbPromo).forEach(e => { if (dbPromo[e] === da) dbPromo[e] = a; });
+  segnaCambiata();
+  disegnaPromozioni(); disegnaEditori();
+}
+
+function disegnaEditori() {
+  const tab = document.getElementById('mapTab');
+  if (!tab) return;
+  const cerca = document.getElementById('mapCerca').value.trim().toLowerCase();
+  const filtro = document.getElementById('mapFiltro').value;
+  const soloVendite = document.getElementById('mapVendite').checked;
+  const v = mappa.vendite || {};
+  const tutti = [...new Set([...Object.keys(dbPromo), ...Object.keys(v)])];
+  let lista = tutti.filter(e =>
+    (!cerca || e.toLowerCase().includes(cerca)) &&
+    (!soloVendite || v[e]) &&
+    (!filtro || (filtro === '__NM' ? !dbPromo[e] : dbPromo[e] === filtro)));
+  lista.sort((a, b) => ((v[b] || 0) - (v[a] || 0)) || a.localeCompare(b, 'it'));
+  const totale = lista.length;
+  lista = lista.slice(0, 300);
+  mappa.lista = lista;
+  document.getElementById('mapConta').textContent = `${Object.keys(dbPromo).length.toLocaleString('it-IT')} editori mappati`;
+  const opz = cur => (cur && !PROMOZIONI.includes(cur) ? `<option value="${escH(cur)}" selected>${escH(cur)} (non in elenco)</option>` : '') +
+    (!cur ? `<option value="" selected>— non mappato (conta in ALTRO) —</option>` : '') +
+    PROMOZIONI.map(p => `<option value="${escH(p)}" ${p === cur ? 'selected' : ''}>${escH(p)}</option>`).join('');
+  tab.innerHTML = `<thead><tr><th class="l">Editore (nome GfK)</th><th>Vendite ${escH(mappa.periodo || '')}</th><th class="l">Promozione</th></tr></thead>
+    <tbody>${lista.map((e, i) => `<tr><td class="l">${escH(e)}</td><td>${v[e] ? fmtVendite(v[e]) : '—'}</td>
+      <td class="l"><select class="map-in" data-i="${i}" onchange="salvaMappa(this)">${opz(dbPromo[e])}</select></td></tr>`).join('')}</tbody>`;
+  document.getElementById('mapNota').textContent = totale > 300
+    ? `Mostrati i primi 300 di ${totale.toLocaleString('it-IT')} (i più venduti): usa la ricerca per trovare gli altri.`
+    : (totale ? '' : 'Nessun editore con questi filtri.');
+}
+
+async function salvaMappa(el) {
+  const editore = mappa.lista[+el.dataset.i];
+  const promo = el.value;
+  if (!promo) return;
+  const {error} = await sb.from('editore_promozione').upsert({ editore_gfk: editore, promo_2026: promo, updated_at: new Date().toISOString() }, { onConflict: 'editore_gfk' });
+  if (error) { toast('Errore: ' + error.message, 'err'); return; }
+  dbPromo[editore] = promo;
+  toast(`✓ ${editore} → ${promo}`, 'ok');
+  segnaCambiata();
+}
+
+// Le quote già caricate usano le mappature di quando sono state calcolate: si ricalcola l'ultima settimana
+function segnaCambiata() {
+  mappa.cambiate++;
+  const box = document.getElementById('mapRicalcola');
+  if (box) box.innerHTML = `<div class="map-avviso">⚠ <span>Hai cambiato <b>${mappa.cambiate}</b> mappature. Le quote in QDM usano ancora quelle vecchie.</span>
+    <button class="btn btn-primary" onclick="ricalcolaMappature()">Ricalcola l'ultima settimana</button></div>`;
+}
+async function ricalcolaMappature() {
+  mappa.cambiate = 0;
+  await rielaboraDaGfk();
+  if (activeTab === 'mappa') showTab('mappa');
+}
+
 // ── STORICO ──────────────────────────────────────────────────
 async function loadWeekList() {
   const [{data:all}, {data:withRecap}] = await Promise.all([
@@ -841,8 +1048,9 @@ async function loadWeek(weekKey) {
 function showTab(tab) {
   activeTab = tab;
   document.querySelectorAll('.tab').forEach((t,i)=>
-    t.classList.toggle('active',['recap','pari','quad','generi','top20'][i]===tab));
+    t.classList.toggle('active',['recap','pari','quad','generi','top20','mappa'][i]===tab));
   const mc = document.getElementById('mainContent');
+  if (tab==='mappa') { mc.innerHTML = buildMappatura(); initMappatura(); return; }
   if (!currentData.recap?.length) {
     mc.innerHTML='<div class="empty-state"><div style="font-size:48px;margin-bottom:16px">📈</div><h2>Nessun dato</h2></div>';
     return;
@@ -1143,7 +1351,7 @@ function buildRecap() {
 }
 
 // ── TREND ANNUALE (da qdm_trend) ─────────────────────────────
-const TREND_PDE = ['PDE SERVIZI COMM. PER EDITORIA','PDE SERVICE'];
+let TREND_PDE = ['PDE SERVIZI COMM. PER EDITORIA','PDE SERVICE'];
 const TREND_COLORS = ['#f59e0b','#22c55e','#a855f7','#ef4444','#ec4899','#14b8a6','#eab308','#6366f1','#f97316','#84cc16'];
 const trendState = { mis:'v', mod:'prog', sel:null, cache:null };
 let trendChartInstance = null;
@@ -1503,7 +1711,7 @@ function buildGeneri() {
 }
 
 // ── TOP 20 ───────────────────────────────────────────────────
-const PDE_PROMOS = new Set(['PDE SERVIZI COMM. PER EDITORIA','PDE SERVICE']);
+let PDE_PROMOS = new Set(['PDE SERVIZI COMM. PER EDITORIA','PDE SERVICE']);
 
 function setTop20Promo(val) {
   top20Promo = val;
@@ -1746,6 +1954,7 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape' && document.g
   const { data: { session } } = await sb.auth.getSession();
   if (session) {
     showApp();
+    await loadPromozioni();
     await loadWeekList();
     const sel=document.getElementById('weekSelect');
     if(sel.options.length>1){sel.selectedIndex=1;await loadWeek(sel.value);}
