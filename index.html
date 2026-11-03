@@ -324,17 +324,11 @@ html[data-theme="light"] .rank-b.b{background:rgba(180,120,60,.12);color:#9a5b1f
 <div class="hdr">
   <div class="logo-box hdr-logo-box"><div class="pde-logo" role="img" aria-label="PDE QDM" style="font-size:13px"><div class="pl-text"><div class="pl-name"><b>PDE</b><span>QDM</span></div><div class="pl-tag"><i class="c0">QUOTE DI</i> <i class="c1">MERCATO</i> <i class="c2">GFK</i></div></div><div class="pl-wing"></div></div></div>
   <div class="hdr-right">
-    <!-- upload compatto inline -->
+    <!-- dati GfK: arrivano da soli il giovedì; il pulsante li fa riscaricare subito -->
     <div class="upload-inline" id="uploadInline">
-      <div class="upload-file-btn" title="Carica i 6 file GFK">
-        <input type="file" multiple accept=".xlsx,.xls" id="fileInput" onchange="handleFiles(this.files)">
-        📂 Carica file GFK
-      </div>
-      <div class="upload-pills" id="filesGrid"></div>
+      <button class="btn btn-primary" id="gfkBtn" style="display:none;padding:5px 12px;font-size:12px" onclick="openGfkModal()" title="Riscarica i dati dal portale GfK (es. se GfK li ha corretti)">⟳ Aggiorna da GfK</button>
       <div class="upload-progress" id="progressWrap"><div class="upload-progress-fill" id="progressFill"></div></div>
       <span id="statusTxt" style="font-size:11px;color:var(--text3);white-space:nowrap"></span>
-      <button class="btn btn-primary" id="btnElabora" onclick="elabora()" disabled style="padding:5px 12px;font-size:12px">Elabora</button>
-      <button class="btn btn-ghost" onclick="resetUpload()" style="padding:5px 10px;font-size:12px">↺</button>
     </div>
     <select class="week-select" id="weekSelect" onchange="loadWeek(this.value)" style="display:none">
       <option value="">— Seleziona settimana —</option>
@@ -369,7 +363,7 @@ html[data-theme="light"] .rank-b.b{background:rgba(180,120,60,.12);color:#9a5b1f
   <div class="empty-state">
     <div style="font-size:48px;margin-bottom:16px">📈</div>
     <h2>Nessun dato caricato</h2>
-    <p>Carica i 6 file GFK e clicca Elabora, oppure seleziona una settimana dallo storico</p>
+    <p>I dati GfK arrivano da soli ogni giovedì mattina. Puoi anche premere ⟳ Aggiorna da GfK oppure scegliere una settimana dallo storico</p>
   </div>
 </div>
 
@@ -386,6 +380,23 @@ html[data-theme="light"] .rank-b.b{background:rgba(180,120,60,.12);color:#9a5b1f
         <span class="spin" id="mapSpin" style="display:none"></span>
         Salva e continua
       </button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-ov" id="gfkModal" style="display:none">
+  <div class="modal pwd-modal">
+    <div class="modal-hdr"><h3>⟳ Aggiorna da GfK</h3><p>Il sistema riscarica i dati dal portale GfK e sostituisce quelli in QDM. Serve per una settimana non ancora arrivata o che GfK ha corretto.</p></div>
+    <div class="modal-body">
+      <div class="login-field"><label>Settimana</label>
+        <select class="msel" id="gfkWeek" style="width:100%"></select>
+      </div>
+      <p style="font-size:12px;color:var(--text3);line-height:1.5">Ci vogliono alcuni minuti. Nel frattempo non entrare nel portale GfK con lo stesso account: ammette una sola sessione.</p>
+      <div class="pwd-err" id="gfkErr"></div>
+    </div>
+    <div class="modal-ftr">
+      <button class="btn btn-ghost" onclick="closeGfkModal()">Annulla</button>
+      <button class="btn btn-primary" id="gfkGo" onclick="avviaGfk()"><span class="spin" id="gfkSpin" style="display:none"></span>Avvia</button>
     </div>
   </div>
 </div>
@@ -471,72 +482,12 @@ let currentData = {};
 let activeTab = 'recap';
 let top20Promo = 'PDE';
 
-// ── DRAG & DROP — supportato direttamente sul file input ──────────────────────────────────────────
-
-async function handleFiles(fileList) {
-  const files = Array.from(fileList);
-  console.log('[handleFiles] file ricevuti:', files.map(f => f.name));
-
-  await Promise.all(files.map(async f => {
-    try {
-      const buf = await f.arrayBuffer();
-      const parsed = parseGFK(buf);
-      const type = detectType(parsed);
-      console.log(`[handleFiles] ${f.name} → tipo: ${type}`);
-      if (type) {
-        recognized[type] = { file: f, ...parsed };
-      } else {
-        toast(`File non riconosciuto: ${f.name}`, 'err');
-      }
-    } catch(e) {
-      console.error(`[handleFiles] errore su ${f.name}:`, e);
-      toast(`Errore lettura ${f.name}: ${e.message}`, 'err');
-    }
-  }));
-
-  console.log('[handleFiles] recognized:', Object.keys(recognized));
-  renderFilePills();
-  checkReady();
-}
-
 // ── PARSER / DETECT TYPE: in qdm-core.js (condivisi con l'import automatico) ──
 const parseGFK = buf => QDMCore.parseGFK(buf);
 const detectType = parsed => QDMCore.detectType(parsed);
 
-function renderFilePills() {
-  const grid = document.getElementById('filesGrid');
-  const loaded = ALL_TYPES.filter(t=>recognized[t]);
-  const missing = ALL_TYPES.filter(t=>!recognized[t]);
-  if (!loaded.length) { grid.innerHTML=''; return; }
-  grid.innerHTML = loaded.map(type => {
-    const {label} = TYPE_LABELS[type];
-    const short = label.replace('DATI GFK ','GFK ').replace('GENERI ','').replace('TOP 20 ','T20 ');
-    return `<div class="fpill ok">✓ ${short}</div>`;
-  }).join('') + missing.map(type => {
-    const {label} = TYPE_LABELS[type];
-    const short = label.replace('DATI GFK ','GFK ').replace('GENERI ','').replace('TOP 20 ','T20 ');
-    return `<div class="fpill">⬜ ${short}</div>`;
-  }).join('');
-}
-
-function checkReady() {
-  const loaded = ALL_TYPES.filter(t=>recognized[t]).length;
-  document.getElementById('btnElabora').disabled = loaded < 6;
-  document.getElementById('statusTxt').textContent = loaded === 0 ? '' : loaded === 6 ? '✓ tutti' : `${loaded}/6`;
-}
-
-function resetUpload() {
-  recognized = {};
-  document.getElementById('filesGrid').innerHTML = '';
-  document.getElementById('progressWrap').style.display = 'none';
-  document.getElementById('btnElabora').disabled = true;
-  document.getElementById('statusTxt').textContent = '';
-  document.getElementById('fileInput').value = '';
-}
-
 // ── ELABORA ──────────────────────────────────────────────────
 async function elabora() {
-  document.getElementById('btnElabora').disabled = true;
   setProgress(0, 'Carico DB promozioni...');
   try {
     await loadDBPromo();
@@ -554,7 +505,6 @@ async function elabora() {
     console.error(e);
     toast('Errore: ' + e.message, 'err');
     hideProgress();
-    document.getElementById('btnElabora').disabled = false;
   }
 }
 
@@ -694,7 +644,11 @@ async function loadGfkStatus() {
       <button class="btn btn-primary" onclick="rielaboraDaGfk()">Assegna promozioni e ricalcola</button>`;
   } else if (l.stato === 'errore') {
     cls = 'err';
-    html = `✕ <span>Import automatico GfK non riuscito (${quando}): ${esc(l.messaggio||'errore sconosciuto')}. Puoi caricare i 6 file a mano.</span>`;
+    html = `✕ <span>Import automatico GfK non riuscito (${quando}): ${esc(l.messaggio||'errore sconosciuto')}. Riprova con ⟳ Aggiorna da GfK.</span>`;
+  } else if (l.stato === 'avviato') {
+    cls = 'info';
+    html = `⟳ <span>${esc(l.messaggio||'Aggiornamento da GfK avviato')} (${quando}): i dati si aggiornano in qualche minuto.</span>
+      <button class="btn btn-ghost" onclick="location.reload()">Ricarica</button>`;
   } else if (l.stato === 'nessun_dato') {
     cls = 'info';
     html = `ⓘ <span>${esc(l.messaggio||'GfK non ha ancora pubblicato i dati della settimana')} (${quando}).</span>`;
@@ -702,6 +656,33 @@ async function loadGfkStatus() {
   bar.className = 'gfk-bar' + (cls ? ' ' + cls : '');
   bar.innerHTML = html;
   bar.style.display = 'flex';
+}
+
+// Pulsante "Aggiorna da GfK": avvia il job su GitHub (funzione qdm_gfk_avvia) per la settimana scelta
+async function openGfkModal() {
+  const sel = document.getElementById('gfkWeek');
+  const {data} = await sb.from('qdm_settimane').select('week_key').order('anno',{ascending:false}).order('cw_to',{ascending:false});
+  const sett = (data || []).map(w => w.week_key);
+  const comeInput = wk => { const m = wk.match(/^(\d{4})_CW\d+-CW(\d+)$/); return m ? `${m[1]}-${+m[2]}` : ''; };
+  sel.innerHTML = `<option value="">Ultima settimana chiusa</option>` +
+    sett.map(wk => `<option value="${comeInput(wk)}">${wk.replace('_', ' ')}</option>`).join('');
+  document.getElementById('gfkErr').style.display = 'none';
+  document.getElementById('gfkModal').style.display = 'flex';
+}
+function closeGfkModal() { document.getElementById('gfkModal').style.display = 'none'; }
+async function avviaGfk() {
+  const btn = document.getElementById('gfkGo'), spin = document.getElementById('gfkSpin');
+  btn.disabled = true; spin.style.display = 'inline-block';
+  const {error} = await sb.rpc('qdm_gfk_avvia', { p_settimana: document.getElementById('gfkWeek').value || null });
+  btn.disabled = false; spin.style.display = 'none';
+  if (error) {
+    const e = document.getElementById('gfkErr');
+    e.textContent = '⚠ ' + error.message; e.style.display = 'block';
+    return;
+  }
+  closeGfkModal();
+  toast('✓ Aggiornamento da GfK avviato: i dati arrivano in qualche minuto', 'ok');
+  loadGfkStatus();
 }
 
 // Riprende gli ultimi 6 Excel salvati dall'import automatico e rifà "Elabora" (con il popup degli editori nuovi)
@@ -714,8 +695,6 @@ async function rielaboraDaGfk() {
       if (error) throw new Error(`${TYPE_LABELS[t].label}: ${error.message}`);
       recognized[t] = { file:{name:`${t}.xlsx`}, ...parseGFK(await data.arrayBuffer()) };
     }
-    renderFilePills();
-    checkReady();
     await elabora();
   } catch(e) {
     console.error(e);
@@ -1576,15 +1555,18 @@ async function doLogout() {
   document.getElementById('weekSelect').style.display = 'none';
   document.getElementById('weekBadge').style.display = 'none';
   document.getElementById('tabsBar').style.display = 'none';
-  document.getElementById('mainContent').innerHTML = '<div class="empty-state"><div style="font-size:48px;margin-bottom:16px">📈</div><h2>Nessun dato caricato</h2><p>Carica i 6 file GFK e clicca Elabora, oppure seleziona una settimana dallo storico</p></div>';
+  document.getElementById('mainContent').innerHTML = '<div class="empty-state"><div style="font-size:48px;margin-bottom:16px">📈</div><h2>Nessun dato caricato</h2><p>I dati GfK arrivano da soli ogni giovedì mattina. Puoi anche premere ⟳ Aggiorna da GfK oppure scegliere una settimana dallo storico</p></div>';
   currentData = {}; currentWeekKey = null;
   document.getElementById('gfkBar').style.display = 'none';
+  document.getElementById('gfkBtn').style.display = 'none';
+  closeGfkModal();
 }
 
 function showApp() {
   document.getElementById('loginWrap').style.display = 'none';
   document.getElementById('logoutBtn').style.display = 'block';
   document.getElementById('pwdBtn').style.display = 'block';
+  document.getElementById('gfkBtn').style.display = 'inline-flex';
 }
 
 // ── CAMBIA PASSWORD ──────────────────────────────────────────

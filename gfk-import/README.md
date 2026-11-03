@@ -1,8 +1,10 @@
 # Import automatico GfK → QDM
 
 Ogni giovedì dalle 9 (ora italiana) GitHub Actions scarica dal portale **GfK Book Insights**
-(https://bi.gfk-e.com) i 6 report della settimana chiusa e li carica in QDM, come si faceva a mano
-con "Carica file GFK" + "Elabora".
+(https://bi.gfk-e.com) i 6 report della settimana chiusa e li carica in QDM. Il caricamento manuale dei file
+non esiste più: in QDM c'è solo il pulsante **⟳ Aggiorna da GfK**, che avvia lo stesso job per la settimana
+scelta (es. se GfK ha corretto i dati) tramite la funzione SQL `qdm_gfk_avvia` (token GitHub
+`app_secrets.github_giro_manager_token`, condiviso con Giro Manager per scelta di Alberto).
 
 | Pezzo | Dove |
 |---|---|
@@ -11,6 +13,7 @@ con "Carica file GFK" + "Elabora".
 | Calcolo (identico al pulsante "Elabora") | `qdm-core.js`, usato anche da `index.html` |
 | Scrittura nel database | edge function `qdm-gfk-import` (sorgente in `functions/`) |
 | Tabella esiti, bucket, chiave | `sql/01_qdm_import_automatico_gfk.sql` |
+| Pulsante "Aggiorna da GfK" | `sql/02_qdm_gfk_avvia.sql` |
 
 I 6 report sono gli stessi indirizzi del portale usati a mano (`c=1105` Italia, `cu=EUR`), con le date
 della settimana: editori anno corrente e anno prima, generi mercato, generi PDE (editori del filtro
