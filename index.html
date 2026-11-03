@@ -63,6 +63,18 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14
 .gfk-bar.info{border-left-color:var(--accent);}
 .gfk-bar b{color:var(--text);font-weight:600;}
 .gfk-bar .btn{padding:5px 12px;font-size:12px;margin-left:auto;}
+
+/* attesa aggiornamento da GfK: schermo ingrigito + frasi che cambiano */
+.attesa-ov{position:fixed;inset:0;z-index:1500;background:rgba(10,12,18,.72);backdrop-filter:grayscale(1) blur(3px);display:flex;align-items:center;justify-content:center;padding:16px;}
+.attesa-box{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:30px 28px 22px;width:440px;max-width:100%;text-align:center;box-shadow:0 30px 80px rgba(0,0,0,.35);}
+.attesa-ruota{width:46px;height:46px;margin:0 auto 18px;border:4px solid rgba(0,180,232,.2);border-top-color:var(--accent);border-radius:50%;animation:sp 1s linear infinite;}
+.attesa-titolo{font-size:15px;font-weight:600;margin-bottom:14px;}
+.attesa-frase{font-size:14px;color:var(--text2);min-height:42px;display:flex;align-items:center;justify-content:center;line-height:1.4;transition:opacity .35s;}
+.attesa-frase.via{opacity:0;}
+.attesa-tempo{font-family:var(--mono);font-size:12px;color:var(--text3);margin-top:14px;}
+.attesa-chiudi{margin-top:16px;background:none;border:none;color:var(--text3);font-size:11px;text-decoration:underline;cursor:pointer;font-family:var(--sans);}
+.attesa-chiudi:hover{color:var(--text);}
+html[data-theme="light"] .attesa-ov{background:rgba(70,78,100,.55);}
 .empty-state{text-align:center;padding:80px 20px;color:var(--text3);}
 .empty-state h2{font-size:18px;color:var(--text2);margin-bottom:8px;}
 
@@ -424,6 +436,16 @@ html[data-theme="light"] .rank-b.b{background:rgba(180,120,60,.12);color:#9a5b1f
   </div>
 </div>
 
+<div class="attesa-ov" id="attesa" style="display:none" role="status" aria-live="polite">
+  <div class="attesa-box">
+    <div class="attesa-ruota"></div>
+    <div class="attesa-titolo" id="attesaTitolo">Aggiornamento da GfK in corso</div>
+    <div class="attesa-frase" id="attesaFrase"></div>
+    <div class="attesa-tempo" id="attesaTempo"></div>
+    <button class="attesa-chiudi" onclick="chiudiAttesa()">Nascondi e continua a lavorare</button>
+  </div>
+</div>
+
 <div id="toasts"></div>
 
 <script>
@@ -632,6 +654,7 @@ async function loadGfkStatus() {
     .neq('stato','prova').order('created_at',{ascending:false}).limit(1);
   const l = !error && data?.[0];
   if (!l) return;
+  if (l.stato === 'avviato' && Date.now() - new Date(l.created_at) < ATTESA_MAX_MS && !attesa.timer) mostraAttesa(new Date(l.created_at));
   const quando = new Date(l.created_at).toLocaleString('it-IT',{dateStyle:'short',timeStyle:'short'});
   const sett = (l.week_key||'').replace('_',' ');
   const esc = t => String(t).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -658,6 +681,81 @@ async function loadGfkStatus() {
   bar.style.display = 'flex';
 }
 
+// ── Attesa con frasi simpatiche finché il job GitHub non scrive l'esito in qdm_import_log ──
+const FRASI_ATTESA = [
+  'Busso alla porta di GfK… toc toc 🚪',
+  'Sfoglio 10.000 titoli, uno alla volta 📚',
+  'Conto le copie vendute senza leccarmi il dito ☝️',
+  'Chiedo gentilmente a Mondadori di spostarsi un attimo…',
+  'Rimetto in ordine gli scaffali della classifica 🗂️',
+  'Separo i gialli dai rosa, i fantasy dai saggi…',
+  'Prendo un caffè con il server di GfK ☕',
+  'Convinco sei Excel a parlarsi tra loro 🤝',
+  'Il bibliotecario dice: silenzio, sto calcolando 🤫',
+  'Spolvero le quote di mercato 🪶',
+  'Faccio due conti con la calcolatrice della nonna 🧮',
+  'Controllo che nessun editore si sia nascosto in ALTRO 🔍',
+  'Aspetto che la stampante finisca la carta… scherzo 😄',
+  'Sto rilegando i risultati con il nastro adesivo buono 📎',
+  'Ancora un attimo: anche i bestseller hanno bisogno di tempo ⏳',
+];
+const ATTESA_MAX_MS = 20 * 60 * 1000;
+const attesa = { timer: null, frase: null, controllo: null, dal: null };
+
+function mostraAttesa(dal) {
+  chiudiAttesa();
+  attesa.dal = dal;
+  document.getElementById('attesa').style.display = 'flex';
+  const el = document.getElementById('attesaFrase');
+  let i = Math.floor(Math.random() * FRASI_ATTESA.length);
+  const cambia = () => {
+    el.classList.add('via');
+    setTimeout(() => { i = (i + 1) % FRASI_ATTESA.length; el.textContent = FRASI_ATTESA[i]; el.classList.remove('via'); }, 350);
+  };
+  el.textContent = FRASI_ATTESA[i];
+  attesa.frase = setInterval(cambia, 4000);
+  const tempo = () => {
+    const sec = Math.max(0, Math.round((Date.now() - attesa.dal) / 1000));
+    document.getElementById('attesaTempo').textContent = `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')} · di solito ci vogliono 3–4 minuti`;
+  };
+  tempo();
+  attesa.timer = setInterval(tempo, 1000);
+  attesa.controllo = setInterval(controllaEsitoGfk, 15000);
+}
+
+function chiudiAttesa() {
+  ['timer', 'frase', 'controllo'].forEach(k => { clearInterval(attesa[k]); attesa[k] = null; });
+  document.getElementById('attesa').style.display = 'none';
+}
+
+async function controllaEsitoGfk() {
+  if (Date.now() - attesa.dal > ATTESA_MAX_MS) {
+    chiudiAttesa();
+    toast('GfK ci sta mettendo più del solito: controlla tra poco o riprova', 'err');
+    return;
+  }
+  const {data} = await sb.from('qdm_import_log').select('created_at,stato,week_key,messaggio')
+    .in('stato', ['ok', 'errore', 'nessun_dato']).gt('created_at', attesa.dal.toISOString())
+    .order('created_at', {ascending:false}).limit(1);
+  const l = data?.[0];
+  if (!l) return;
+  chiudiAttesa();
+  if (l.stato === 'ok') {
+    toast(`✓ Dati GfK aggiornati: ${(l.week_key || '').replace('_', ' ')}`, 'ok');
+    trendState.cache = null;
+    currentWeekKey = l.week_key || currentWeekKey;
+    await loadWeekList();
+    if (currentWeekKey) {
+      const sel = document.getElementById('weekSelect');
+      if ([...sel.options].some(o => o.value === currentWeekKey)) sel.value = currentWeekKey;
+      await loadWeek(currentWeekKey);
+    }
+  } else {
+    toast(l.stato === 'errore' ? 'Aggiornamento da GfK non riuscito' : 'GfK non ha ancora pubblicato i dati', 'err');
+  }
+  loadGfkStatus();
+}
+
 // Pulsante "Aggiorna da GfK": avvia il job su GitHub (funzione qdm_gfk_avvia) per la settimana scelta
 async function openGfkModal() {
   const sel = document.getElementById('gfkWeek');
@@ -681,8 +779,8 @@ async function avviaGfk() {
     return;
   }
   closeGfkModal();
-  toast('✓ Aggiornamento da GfK avviato: i dati arrivano in qualche minuto', 'ok');
   loadGfkStatus();
+  mostraAttesa(new Date());
 }
 
 // Riprende gli ultimi 6 Excel salvati dall'import automatico e rifà "Elabora" (con il popup degli editori nuovi)
@@ -1560,6 +1658,7 @@ async function doLogout() {
   document.getElementById('gfkBar').style.display = 'none';
   document.getElementById('gfkBtn').style.display = 'none';
   closeGfkModal();
+  chiudiAttesa();
 }
 
 function showApp() {
