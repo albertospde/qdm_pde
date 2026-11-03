@@ -340,7 +340,12 @@ async function main() {
   const nonMappati = core.editoriNonMappati(rec, stato.promo);
   const righe = { recap: calc.recap.length, trend: calc.trend.length, generi: calc.generi.length, top20: calc.top20.length };
   console.log("Righe calcolate:", JSON.stringify(righe), `· editori senza promozione: ${nonMappati.length}`);
-  const dettagli = { righe, file_byte: dimensioni, filtro_pde: scarico.filtro.preset, editori_filtro_pde: scarico.filtro.nEditori, secondi: Math.round((Date.now() - t0) / 1000) };
+  // riga "Total" di ogni Excel e data di creazione: servono a capire se GfK ha ritoccato i dati
+  const totali = Object.fromEntries(core.TIPI.map(t => {
+    const tot = rec[t].rows.find(r => String(r["Rank"] ?? r["ID"] ?? "").toLowerCase() === "total");
+    return [t, { periodo: rec[t].meta["Period"], righe: rec[t].rows.length, totale: tot ? Object.values(tot).filter(v => typeof v === "number").slice(0, 4) : null }];
+  }));
+  const dettagli = { righe, totali, file_byte: dimensioni, filtro_pde: scarico.filtro.preset, editori_filtro_pde: scarico.filtro.nEditori, secondi: Math.round((Date.now() - t0) / 1000) };
 
   if (PROVA) {
     await salvaExcel(scarico.files, "prova");   // per poterli confrontare a mano con quelli caricati in QDM
