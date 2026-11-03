@@ -700,7 +700,7 @@ const FRASI_ATTESA = [
   'Ancora un attimo: anche i bestseller hanno bisogno di tempo ⏳',
 ];
 const ATTESA_MAX_MS = 20 * 60 * 1000;
-const attesa = { timer: null, frase: null, controllo: null, dal: null };
+const attesa = { timer: null, frase: null, controllo: null, primo: null, dal: null };
 
 function mostraAttesa(dal) {
   chiudiAttesa();
@@ -720,11 +720,12 @@ function mostraAttesa(dal) {
   };
   tempo();
   attesa.timer = setInterval(tempo, 1000);
+  attesa.primo = setTimeout(controllaEsitoGfk, 5000);   // un avvio rifiutato da GitHub si vede subito
   attesa.controllo = setInterval(controllaEsitoGfk, 15000);
 }
 
 function chiudiAttesa() {
-  ['timer', 'frase', 'controllo'].forEach(k => { clearInterval(attesa[k]); attesa[k] = null; });
+  ['timer', 'frase', 'controllo', 'primo'].forEach(k => { clearInterval(attesa[k]); attesa[k] = null; });
   document.getElementById('attesa').style.display = 'none';
 }
 
@@ -734,8 +735,10 @@ async function controllaEsitoGfk() {
     toast('GfK ci sta mettendo più del solito: controlla tra poco o riprova', 'err');
     return;
   }
+  // se GitHub ha rifiutato l'avvio, la funzione trasforma la riga 'avviato' in 'errore'
+  await sb.rpc('qdm_gfk_controlla_avvio');
   const {data} = await sb.from('qdm_import_log').select('created_at,stato,week_key,messaggio')
-    .in('stato', ['ok', 'errore', 'nessun_dato']).gt('created_at', attesa.dal.toISOString())
+    .in('stato', ['ok', 'errore', 'nessun_dato']).gte('created_at', new Date(attesa.dal - 5000).toISOString())
     .order('created_at', {ascending:false}).limit(1);
   const l = data?.[0];
   if (!l) return;
@@ -751,7 +754,7 @@ async function controllaEsitoGfk() {
       await loadWeek(currentWeekKey);
     }
   } else {
-    toast(l.stato === 'errore' ? 'Aggiornamento da GfK non riuscito' : 'GfK non ha ancora pubblicato i dati', 'err');
+    toast(l.stato === 'errore' ? (l.messaggio || 'Aggiornamento da GfK non riuscito') : 'GfK non ha ancora pubblicato i dati', 'err');
   }
   loadGfkStatus();
 }
