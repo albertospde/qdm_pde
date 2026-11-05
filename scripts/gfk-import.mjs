@@ -1,5 +1,5 @@
 // QDM — import automatico settimanale dei dati GfK (Book Insights, https://bi.gfk-e.com).
-// Eseguito da GitHub Actions (.github/workflows/gfk-import.yml) il giovedì dalle 9 (ora italiana).
+// Eseguito da GitHub Actions (.github/workflows/gfk-import.yml) il giovedì dalle 8 (ora italiana).
 //
 //   1. chiede alla edge function qdm-gfk-import l'ultima settimana caricata e la mappa editore → promozione
 //   2. se manca l'ultima settimana chiusa: entra nel portale GfK con un browser (Playwright),
@@ -29,7 +29,7 @@ const FN_URL = "https://tdflwenlylhctxssatax.supabase.co/functions/v1/qdm-gfk-im
 const ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRkZmx3ZW5seWxoY3R4c3NhdGF4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYzMzgyNzYsImV4cCI6MjA5MTkxNDI3Nn0.l35qEL7LOvyYuI1McQlVqj4vbyTqmlevcmqWbTGYi2Q";
 const GFK = "https://bi.gfk-e.com";
 const APP = `${GFK}/bookint.it/#`;
-const ORA_INIZIO = 9;   // ora italiana da cui GfK pubblica i dati del giovedì
+const ORA_INIZIO = 8;   // ora italiana del primo tentativo del giovedì (se GfK non ha ancora pubblicato, riprova l'ora dopo)
 const ORA_ULTIMO = 13;  // ultimo passaggio del giovedì: se i dati mancano ancora, lo scrive nel log
 const BLOCCO = 2000;
 
@@ -329,7 +329,7 @@ async function main() {
   const weekKey = `${target.anno}_CW01-CW${due(target.cw)}`;
   console.log(`Settimana: ${weekKey}${PROVA ? " (prova)" : ""}${FORZA ? " (forzata)" : ""}`);
 
-  if (!PROVA && !FORZA && !process.env.SETTIMANA && ora < ORA_INIZIO) { console.log(`Sono le ${ora}: i dati GfK escono dalle ${ORA_INIZIO}.`); return; }
+  if (!PROVA && !FORZA && !process.env.SETTIMANA && ora < ORA_INIZIO) { console.log(`Sono le ${ora}: l'import parte dalle ${ORA_INIZIO}.`); return; }
 
   const stato = await fn("stato");
   if (!PROVA && !FORZA && stato.settimane.includes(weekKey)) { console.log("Settimana già presente in QDM: niente da fare."); return; }

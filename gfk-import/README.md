@@ -1,6 +1,6 @@
 # Import automatico GfK → QDM
 
-Ogni giovedì dalle 9 (ora italiana) GitHub Actions scarica dal portale **GfK Book Insights**
+Ogni giovedì dalle 8 (ora italiana) GitHub Actions scarica dal portale **GfK Book Insights**
 (https://bi.gfk-e.com) i 6 report della settimana chiusa e li carica in QDM. Il caricamento manuale dei file
 non esiste più: in QDM c'è solo il pulsante **⟳ Aggiorna da GfK**, che avvia lo stesso job per la settimana
 scelta (es. se GfK ha corretto i dati) tramite la funzione SQL `qdm_gfk_avvia` (token GitHub
@@ -8,7 +8,7 @@ scelta (es. se GfK ha corretto i dati) tramite la funzione SQL `qdm_gfk_avvia` (
 
 | Pezzo | Dove |
 |---|---|
-| Orario e avvio manuale | `.github/workflows/gfk-import.yml` (giovedì 7:15–12:15 UTC, ogni ora) |
+| Orario e avvio manuale | `.github/workflows/gfk-import.yml` (giovedì 6:02–12:02 UTC, ogni ora; riprova finché GfK non pubblica) |
 | Scaricamento ed elaborazione | `scripts/gfk-import.mjs` (Playwright + SheetJS) |
 | Calcolo (identico al pulsante "Elabora") | `qdm-core.js`, usato anche da `index.html` |
 | Scrittura nel database | edge function `qdm-gfk-import` (sorgente in `functions/`) |

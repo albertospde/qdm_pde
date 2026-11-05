@@ -1,12 +1,12 @@
 name: Import automatico GfK
 
 # Ogni giovedì scarica dal portale GfK Book Insights i 6 report della settimana chiusa e li carica in QDM
-# (scripts/gfk-import.mjs). GitHub usa l'ora UTC: i passaggi delle 7:15–12:15 UTC coprono le 9–13 italiane
-# sia con l'ora legale sia con quella solare. Lo script parte solo dalle 9 italiane e si ferma appena la
+# (scripts/gfk-import.mjs). GitHub usa l'ora UTC: i passaggi delle 6:02–12:02 UTC coprono le 8–13 italiane
+# sia con l'ora legale sia con quella solare. Lo script parte solo dalle 8 italiane e si ferma appena la
 # settimana è in QDM, quindi i passaggi successivi non fanno nulla.
 on:
   schedule:
-    - cron: "15 7-12 * * 4"
+    - cron: "2 6-12 * * 4"
   workflow_dispatch:
     inputs:
       settimana:
