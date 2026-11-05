@@ -3,7 +3,7 @@ create table if not exists public.qdm_import_log (
   id bigserial primary key,
   created_at timestamptz not null default now(),
   origine text not null default 'github',
-  stato text not null,               -- ok | prova | nessun_dato | errore
+  stato text not null,               -- ok | prova | nessun_dato | errore | avviato | in_corso
   week_key text,
   messaggio text,
   editori_non_mappati jsonb,

@@ -4,6 +4,7 @@
 //   stato       → ultima settimana caricata, elenco settimane, mappa editore → promozione
 //   upload_url  → { tipo, cartella? } → URL firmato per salvare l'Excel in storage qdm-gfk/ultima/<tipo>.xlsx (o prova/)
 //   leggi       → { week_key, tabella, offset } → righe già salvate (per la prova di confronto)
+//   apri        → { settimana } → registra la settimana (le righe dipendono da qdm_settimane) e segna il salvataggio "in_corso"
 //   pulisci     → { week_key } → cancella recap/trend/generi/top20 di quella settimana
 //   scrivi      → { week_key, tabella, righe } → inserisce righe di quella settimana
 //   chiudi      → { settimana, log } → registra la settimana, pulisce il dettaglio delle settimane vecchie, scrive il log
@@ -63,7 +64,13 @@ async function azione(body: any) {
         (data || []).forEach(r => { promo[r.editore_gfk] = r.promo_2026; });
         if (!data || data.length < 1000) break;
       }
-      return { ultima: sett?.[0] ?? null, settimane: (sett || []).map(s => s.week_key), promo };
+      // Una settimana il cui ultimo salvataggio si è interrotto ("in_corso" senza "ok") va rifatta
+      const { data: logs } = await admin.from("qdm_import_log").select("week_key, stato")
+        .in("stato", ["in_corso", "ok"]).not("week_key", "is", null).order("created_at", { ascending: false }).limit(200);
+      const ultimoEsito: Record<string, string> = {};
+      (logs || []).forEach(l => { ultimoEsito[l.week_key] ??= l.stato; });
+      const complete = (sett || []).filter(s => ultimoEsito[s.week_key] !== "in_corso");
+      return { ultima: complete[0] ?? null, settimane: complete.map(s => s.week_key), promo };
     }
     case "upload_url": {
       if (!TIPI.includes(body.tipo)) throw new Error("tipo non valido");
@@ -79,6 +86,14 @@ async function azione(body: any) {
         .order(body.tabella === "qdm_trend" ? "promozione" : "id").range(da, da + BLOCCO_LETTURA - 1);
       if (error) throw new Error("Errore lettura: " + error.message);
       return { righe: data || [], fine: (data || []).length < BLOCCO_LETTURA };
+    }
+    case "apri": {
+      const s = body.settimana || {};
+      const settimana = { week_key: weekKey(s.week_key), anno: Number(s.anno), cw_from: Number(s.cw_from) || null, cw_to: Number(s.cw_to) || null };
+      const { error } = await admin.from("qdm_settimane").upsert(settimana, { onConflict: "week_key" });
+      if (error) throw new Error("Errore qdm_settimane: " + error.message);
+      await scriviLog(admin, { stato: "in_corso", week_key: settimana.week_key, messaggio: "Salvataggio in corso" });
+      return { ok: true };
     }
     case "pulisci": {
       const wk = weekKey(body.week_key);

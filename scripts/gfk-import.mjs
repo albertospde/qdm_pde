@@ -313,8 +313,10 @@ async function salvaExcel(files, cartella) {
 async function salva(calc, files) {
   await salvaExcel(files, "ultima");
   const wk = calc.weekKey;
+  await fn("apri", { settimana: calc.settimana });
   await fn("pulisci", { week_key: wk });
-  for (const [tabella, righe] of [["qdm_recap", calc.recap], ["qdm_trend", calc.trend], ["qdm_generi", calc.generi], ["qdm_top20", calc.top20]]) {
+  // recap per ultimo: QDM elenca solo le settimane che hanno il recap, così compare quando è completa
+  for (const [tabella, righe] of [["qdm_top20", calc.top20], ["qdm_generi", calc.generi], ["qdm_trend", calc.trend], ["qdm_recap", calc.recap]]) {
     for (let i = 0; i < righe.length; i += BLOCCO) await fn("scrivi", { week_key: wk, tabella, righe: righe.slice(i, i + BLOCCO) });
   }
 }
