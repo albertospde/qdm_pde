@@ -116,6 +116,7 @@ table td{padding:8px 12px;border-bottom:1px solid rgba(42,48,69,.4);font-family:
 table td.l{text-align:left;font-family:var(--sans);font-size:12px;font-weight:500;color:var(--text);}
 table td.dim{font-size:10px;color:var(--text3);font-family:var(--sans);}
 table tr:hover td{background:rgba(255,255,255,.02);}
+.soc-membri{font-size:10px;color:var(--text3);font-weight:400;margin-top:2px;}
 table tr.tot td{background:rgba(0,180,232,.07);font-weight:600;color:var(--text);border-top:1px solid var(--border);}
 table tr:last-child td{border-bottom:none;}
 .tg th{background:rgba(0,180,232,.08);color:var(--accent);text-align:center!important;font-size:10px;}
@@ -1216,6 +1217,26 @@ async function buildRecapChart(recapRows) {
   });
 }
 
+// Promozioni della stessa società mostrate come una sola riga (somma) nella tabella "Quote Value %",
+// con sotto i nomi delle singole promozioni e la loro quota
+const SOCIETA = {
+  'NEWMEDIA': ['PROMEDI','NW CONSULENZA MARKETING EDIT.'],
+};
+function righeSocieta(rows, n) {
+  const out = [];
+  const usate = new Set();
+  Object.entries(SOCIETA).forEach(([nome, promos]) => {
+    const membri = promos.map(p => rows.find(r => r.promozione === p)).filter(Boolean);
+    if (membri.length < 2) return;
+    membri.forEach(m => usate.add(m.promozione));
+    const somma = k => membri.reduce((t, m) => t + n(m[k]), 0);
+    out.push({ promozione: nome, membri, value_26: somma('value_26'), qdm_value_26: somma('qdm_value_26'), qdm_value_25p: somma('qdm_value_25p') });
+  });
+  rows.filter(r => !usate.has(r.promozione)).forEach(r => out.push(r));
+  const altro = out.filter(r => r.promozione === 'ALTRO');
+  return [...out.filter(r => r.promozione !== 'ALTRO').sort((a, b) => n(b.value_26) - n(a.value_26)), ...altro];
+}
+
 // ── RECAP ────────────────────────────────────────────────────
 function buildRecap() {
   const rows = currentData.recap;
@@ -1280,8 +1301,8 @@ function buildRecap() {
         <thead><tr>
           ${sh('Promozione',0,true)}${sh('QDM 2026',1)}${sh('QDM 2025',2)}${sh('Δ pp',3)}
         </tr></thead>
-        <tbody>${all.map(r=>{const d=(r.qdm_value_26||0)-(r.qdm_value_25p||0);return `<tr>
-          <td class="l">${r.promozione}</td>
+        <tbody>${righeSocieta(all, n).map(r=>{const d=n(r.qdm_value_26)-n(r.qdm_value_25p);return `<tr>
+          <td class="l">${r.membri ? `${r.promozione}<div class="soc-membri">${r.membri.map(m=>`${escH(m.promozione)} ${fmtPct2(n(m.qdm_value_26))}`).join(' · ')}</div>` : r.promozione}</td>
           <td>${fmtPct2(r.qdm_value_26)}</td><td>${fmtPct2(r.qdm_value_25p)}</td>
           <td class="${d>=0?'pos':'neg'}">${d>=0?'+':''}${(d*100).toLocaleString('it-IT',{minimumFractionDigits:2,maximumFractionDigits:2})} pp</td>
         </tr>`}).join('')}</tbody>
