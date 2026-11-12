@@ -116,7 +116,7 @@ table td{padding:8px 12px;border-bottom:1px solid rgba(42,48,69,.4);font-family:
 table td.l{text-align:left;font-family:var(--sans);font-size:12px;font-weight:500;color:var(--text);}
 table td.dim{font-size:10px;color:var(--text3);font-family:var(--sans);}
 table tr:hover td{background:rgba(255,255,255,.02);}
-.soc-membri{font-size:10px;color:var(--text3);font-weight:400;margin-top:2px;}
+.soc-ast{color:var(--accent);font-weight:700;margin-left:3px;cursor:help;}
 table tr.tot td{background:rgba(0,180,232,.07);font-weight:600;color:var(--text);border-top:1px solid var(--border);}
 table tr:last-child td{border-bottom:none;}
 .tg th{background:rgba(0,180,232,.08);color:var(--accent);text-align:center!important;font-size:10px;}
@@ -1217,10 +1217,11 @@ async function buildRecapChart(recapRows) {
   });
 }
 
-// Promozioni della stessa società mostrate come una sola riga (somma) nella tabella "Quote Value %",
-// con sotto i nomi delle singole promozioni e la loro quota
+// Promozioni mostrate come una sola riga (somma) nella tabella "Quote Value %";
+// l'asterisco accanto al nome mostra al passaggio del mouse le quote delle singole promozioni
 const SOCIETA = {
-  'NEWMEDIA': ['PROMEDI','NW CONSULENZA MARKETING EDIT.'],
+  'PDE + PDE SERVICE': ['PDE SERVIZI COMM. PER EDITORIA','PDE SERVICE'],
+  'PROMEDI + NW': ['PROMEDI','NW CONSULENZA MARKETING EDIT.'],
 };
 function righeSocieta(rows, n) {
   const out = [];
@@ -1302,7 +1303,7 @@ function buildRecap() {
           ${sh('Promozione',0,true)}${sh('QDM 2026',1)}${sh('QDM 2025',2)}${sh('Δ pp',3)}
         </tr></thead>
         <tbody>${righeSocieta(all, n).map(r=>{const d=n(r.qdm_value_26)-n(r.qdm_value_25p);return `<tr>
-          <td class="l">${r.membri ? `${r.promozione}<div class="soc-membri">${r.membri.map(m=>`${escH(m.promozione)} ${fmtPct2(n(m.qdm_value_26))}`).join(' · ')}</div>` : r.promozione}</td>
+          <td class="l">${r.membri ? `${r.promozione}<span class="soc-ast" title="${escH(r.membri.map(m=>`${m.promozione}: ${fmtPct2(n(m.qdm_value_26))} (2025: ${fmtPct2(n(m.qdm_value_25p))})`).join(String.fromCharCode(10)))}">*</span>` : r.promozione}</td>
           <td>${fmtPct2(r.qdm_value_26)}</td><td>${fmtPct2(r.qdm_value_25p)}</td>
           <td class="${d>=0?'pos':'neg'}">${d>=0?'+':''}${(d*100).toLocaleString('it-IT',{minimumFractionDigits:2,maximumFractionDigits:2})} pp</td>
         </tr>`}).join('')}</tbody>
